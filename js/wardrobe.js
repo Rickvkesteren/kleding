@@ -275,26 +275,80 @@ const WardrobeManager = {
     },
 
     showNotification(message) {
-        // Simple notification
+        // Remove existing notification
+        const existing = document.querySelector('.toast-notification');
+        if (existing) existing.remove();
+
+        // Create beautiful notification
         const notification = document.createElement('div');
+        notification.className = 'toast-notification';
+        notification.innerHTML = `
+            <div class="toast-content">
+                <span class="toast-icon">✨</span>
+                <span class="toast-message">${message}</span>
+            </div>
+        `;
         notification.style.cssText = `
             position: fixed;
             bottom: 100px;
             left: 50%;
-            transform: translateX(-50%);
-            background: #2d3436;
+            transform: translateX(-50%) translateY(100px);
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
             color: white;
-            padding: 12px 24px;
-            border-radius: 25px;
+            padding: 14px 28px;
+            border-radius: 50px;
             z-index: 1000;
-            animation: fadeIn 0.3s ease;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            font-weight: 500;
+            font-size: 0.9rem;
+            opacity: 0;
+            animation: toastIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
         `;
-        notification.textContent = message;
+
+        // Add animation keyframes if not exists
+        if (!document.querySelector('#toast-styles')) {
+            const style = document.createElement('style');
+            style.id = 'toast-styles';
+            style.textContent = `
+                @keyframes toastIn {
+                    0% {
+                        opacity: 0;
+                        transform: translateX(-50%) translateY(100px) scale(0.8);
+                    }
+                    100% {
+                        opacity: 1;
+                        transform: translateX(-50%) translateY(0) scale(1);
+                    }
+                }
+                @keyframes toastOut {
+                    0% {
+                        opacity: 1;
+                        transform: translateX(-50%) translateY(0) scale(1);
+                    }
+                    100% {
+                        opacity: 0;
+                        transform: translateX(-50%) translateY(-20px) scale(0.8);
+                    }
+                }
+                .toast-content {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                }
+                .toast-icon {
+                    font-size: 1.1rem;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
         document.body.appendChild(notification);
 
         setTimeout(() => {
-            notification.remove();
-        }, 2000);
+            notification.style.animation = 'toastOut 0.3s ease forwards';
+            setTimeout(() => notification.remove(), 300);
+        }, 2500);
     }
 };
 

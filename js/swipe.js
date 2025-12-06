@@ -259,29 +259,36 @@ const SwipeManager = {
             startY = e.touches[0].clientY;
             isDragging = true;
             card.style.transition = 'none';
-        });
+        }, { passive: true });
 
         card.addEventListener('touchmove', (e) => {
             if (!isDragging) return;
             currentX = e.touches[0].clientX;
             const diff = currentX - startX;
-            const rotation = diff * 0.1;
-            card.style.transform = `translateX(${diff}px) rotate(${rotation}deg)`;
+            const rotation = diff * 0.15;
+            const scale = 1 - Math.abs(diff) * 0.0005;
             
-            // Visual feedback
+            card.style.transform = `translateX(${diff}px) rotate(${rotation}deg) scale(${Math.max(0.95, scale)})`;
+            
+            // Show swipe indicators
             if (diff > 50) {
-                card.style.boxShadow = '0 0 20px rgba(253, 121, 168, 0.5)';
+                card.classList.add('swiping-right');
+                card.classList.remove('swiping-left');
+                card.style.boxShadow = '0 10px 40px rgba(16, 185, 129, 0.4)';
             } else if (diff < -50) {
-                card.style.boxShadow = '0 0 20px rgba(231, 76, 60, 0.3)';
+                card.classList.add('swiping-left');
+                card.classList.remove('swiping-right');
+                card.style.boxShadow = '0 10px 40px rgba(239, 68, 68, 0.4)';
             } else {
+                card.classList.remove('swiping-left', 'swiping-right');
                 card.style.boxShadow = '';
             }
-        });
+        }, { passive: true });
 
         card.addEventListener('touchend', () => {
             if (!isDragging) return;
             isDragging = false;
-            card.style.transition = 'transform 0.3s ease';
+            card.style.transition = 'all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
             
             const diff = currentX - startX;
             
@@ -292,6 +299,7 @@ const SwipeManager = {
             } else {
                 card.style.transform = '';
                 card.style.boxShadow = '';
+                card.classList.remove('swiping-left', 'swiping-right');
             }
         });
     },
@@ -347,6 +355,10 @@ const SwipeManager = {
         const detailsEl = document.getElementById('swipeItemDetails');
         const counterEl = document.getElementById('cardCounter');
 
+        // Animate card entrance
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.8) translateY(30px)';
+        
         // Set image with fallback
         if (item.image) {
             imageEl.src = item.image;
@@ -361,10 +373,14 @@ const SwipeManager = {
         detailsEl.textContent = `${WardrobeManager.getColorLabel(item.color)} • ${this.getStyleLabel(item.style)}`;
         counterEl.textContent = `${this.currentIndex + 1}/${this.currentItems.length}`;
 
-        // Reset card position
-        card.style.transform = '';
-        card.style.boxShadow = '';
-        card.classList.remove('swiping-left', 'swiping-right');
+        // Animate in
+        requestAnimationFrame(() => {
+            card.style.transition = 'all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+            card.style.opacity = '1';
+            card.style.transform = 'scale(1) translateY(0)';
+            card.style.boxShadow = '';
+            card.classList.remove('swiping-left', 'swiping-right');
+        });
     },
 
     getPlaceholderImage(item) {
