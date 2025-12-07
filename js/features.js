@@ -303,7 +303,7 @@ const RealWeatherAPI = {
                 desc: 'Wisselend bewolkt'
             });
         }
-        return days;
+        return Promise.resolve(days);
     }
 };
 
