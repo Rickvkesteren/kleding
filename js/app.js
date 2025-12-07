@@ -319,56 +319,177 @@ const App = {
 
     // ==================== STATS PAGE ====================
     loadStatsPage() {
-        if (typeof StatsManager === 'undefined') return;
+        const wardrobe = DataManager.getWardrobe();
+        const history = DataManager.getHistory();
         
-        // Style Analysis
-        const styleBars = document.getElementById('styleBars');
-        if (styleBars) {
-            const wardrobe = DataManager.getWardrobe();
-            const styleAnalysis = typeof AIStyleMatcher !== 'undefined' 
-                ? AIStyleMatcher.analyzeStyle(wardrobe)
-                : [{ style: 'casual', percentage: 100 }];
+        // Quick Stats
+        const totalEl = document.getElementById('totalItemsStats');
+        const outfitsEl = document.getElementById('totalOutfitsStats');
+        if (totalEl) totalEl.textContent = wardrobe.length;
+        if (outfitsEl) outfitsEl.textContent = history.length;
+        
+        // Season Balance
+        const seasonBalance = document.getElementById('seasonBalance');
+        const seasonTips = document.getElementById('seasonTips');
+        if (seasonBalance) {
+            const seasons = { summer: 0, winter: 0, spring: 0, all: 0 };
+            wardrobe.forEach(item => {
+                const s = item.season || 'all';
+                if (seasons[s] !== undefined) seasons[s]++;
+                else seasons.all++;
+            });
+            const total = wardrobe.length || 1;
             
-            styleBars.innerHTML = styleAnalysis.slice(0, 4).map(item => `
-                <div class="style-bar">
-                    <span class="style-bar-label">${item.style}</span>
-                    <div class="style-bar-track">
-                        <div class="style-bar-fill" style="width: ${item.percentage}%"></div>
+            seasonBalance.innerHTML = `
+                <div class="balance-bar">
+                    <div class="balance-label"><i class="fas fa-sun" style="color:#f59e0b"></i> Zomer</div>
+                    <div class="balance-track">
+                        <div class="balance-fill summer" style="width: ${(seasons.summer/total)*100}%">
+                            <span>${seasons.summer}</span>
+                        </div>
                     </div>
-                    <span class="style-bar-value">${item.percentage}%</span>
+                </div>
+                <div class="balance-bar">
+                    <div class="balance-label"><i class="fas fa-snowflake" style="color:#3b82f6"></i> Winter</div>
+                    <div class="balance-track">
+                        <div class="balance-fill winter" style="width: ${(seasons.winter/total)*100}%">
+                            <span>${seasons.winter}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="balance-bar">
+                    <div class="balance-label"><i class="fas fa-leaf" style="color:#22c55e"></i> Lente</div>
+                    <div class="balance-track">
+                        <div class="balance-fill spring" style="width: ${(seasons.spring/total)*100}%">
+                            <span>${seasons.spring}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="balance-bar">
+                    <div class="balance-label"><i class="fas fa-infinity" style="color:#8b5cf6"></i> Altijd</div>
+                    <div class="balance-track">
+                        <div class="balance-fill all" style="width: ${(seasons.all/total)*100}%">
+                            <span>${seasons.all}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Generate tips
+            if (seasonTips) {
+                const tips = [];
+                if (seasons.summer < 3) tips.push({ type: 'warning', text: 'Je hebt weinig zomerkleding. Tijd voor shopping! ☀️' });
+                if (seasons.winter < 3) tips.push({ type: 'warning', text: 'Je hebt weinig winterkleding. Bereid je voor op de kou! 🧥' });
+                if (seasons.all > total * 0.5) tips.push({ type: 'success', text: 'Super! Je hebt veel veelzijdige items 👍' });
+                if (tips.length === 0) tips.push({ type: 'success', text: 'Je garderobe is goed gebalanceerd! ✨' });
+                
+                seasonTips.innerHTML = tips.map(tip => `
+                    <div class="balance-tip ${tip.type}">
+                        <i class="fas fa-${tip.type === 'warning' ? 'exclamation-triangle' : 'check-circle'}"></i>
+                        <span>${tip.text}</span>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        // Occasion Chart
+        const occasionChart = document.getElementById('occasionChart');
+        if (occasionChart) {
+            // Analyze tags and categories for occasion
+            const occasions = { casual: 0, business: 0, sport: 0, party: 0 };
+            wardrobe.forEach(item => {
+                const tags = (item.tags || []).join(' ').toLowerCase();
+                const name = (item.name || '').toLowerCase();
+                if (tags.includes('werk') || tags.includes('zakelijk') || tags.includes('business') || name.includes('blazer') || name.includes('overhemd')) {
+                    occasions.business++;
+                } else if (tags.includes('sport') || tags.includes('gym') || name.includes('sneaker')) {
+                    occasions.sport++;
+                } else if (tags.includes('feest') || tags.includes('party') || tags.includes('uitgaan')) {
+                    occasions.party++;
+                } else {
+                    occasions.casual++;
+                }
+            });
+            
+            occasionChart.innerHTML = `
+                <div class="occasion-item casual">
+                    <div class="occasion-icon">👕</div>
+                    <div class="occasion-count">${occasions.casual}</div>
+                    <div class="occasion-label">Casual</div>
+                </div>
+                <div class="occasion-item business">
+                    <div class="occasion-icon">👔</div>
+                    <div class="occasion-count">${occasions.business}</div>
+                    <div class="occasion-label">Zakelijk</div>
+                </div>
+                <div class="occasion-item sport">
+                    <div class="occasion-icon">🏃</div>
+                    <div class="occasion-count">${occasions.sport}</div>
+                    <div class="occasion-label">Sport</div>
+                </div>
+                <div class="occasion-item party">
+                    <div class="occasion-icon">🎉</div>
+                    <div class="occasion-count">${occasions.party}</div>
+                    <div class="occasion-label">Uitgaan</div>
+                </div>
+            `;
+        }
+        
+        // Category Chart
+        const categoryChart = document.getElementById('categoryChart');
+        if (categoryChart) {
+            const categories = { tops: 0, bottoms: 0, shoes: 0, outerwear: 0, accessories: 0 };
+            wardrobe.forEach(item => {
+                const cat = item.category || 'tops';
+                if (categories[cat] !== undefined) categories[cat]++;
+            });
+            const maxCat = Math.max(...Object.values(categories)) || 1;
+            
+            const catNames = { tops: 'Tops', bottoms: 'Broeken', shoes: 'Schoenen', outerwear: 'Jassen', accessories: 'Accessoires' };
+            const catIcons = { tops: 'fa-shirt', bottoms: 'fa-socks', shoes: 'fa-shoe-prints', outerwear: 'fa-vest', accessories: 'fa-glasses' };
+            
+            categoryChart.innerHTML = Object.entries(categories).map(([cat, count]) => `
+                <div class="category-bar">
+                    <div class="category-icon"><i class="fas ${catIcons[cat]}"></i></div>
+                    <div class="category-info">
+                        <div class="category-name">${catNames[cat]}</div>
+                        <div class="category-track">
+                            <div class="category-fill ${cat}" style="width: ${(count/maxCat)*100}%"></div>
+                        </div>
+                    </div>
+                    <span class="category-count">${count}</span>
                 </div>
             `).join('');
         }
         
-        // Wardrobe Value
-        const valueEl = document.getElementById('wardrobeValue');
-        const totalEl = document.getElementById('totalItemsStats');
-        if (valueEl) valueEl.textContent = '€' + StatsManager.getTotalValue().toFixed(2);
-        if (totalEl) totalEl.textContent = DataManager.getWardrobe().length;
-        
-        // Favorite Colors
+        // Color Stats
         const colorStats = document.getElementById('colorStats');
         if (colorStats) {
-            const analysis = StatsManager.getStyleAnalysis();
             const colorMap = {
                 white: '#f5f5f5', black: '#1a1a1a', gray: '#6b7280', blue: '#3b82f6',
                 red: '#ef4444', green: '#22c55e', navy: '#1e3a5f', beige: '#d4a574',
                 brown: '#92400e', pink: '#ec4899', yellow: '#eab308', purple: '#8b5cf6'
             };
+            const colors = {};
+            wardrobe.forEach(item => {
+                if (item.color) colors[item.color] = (colors[item.color] || 0) + 1;
+            });
+            const sortedColors = Object.entries(colors).sort((a,b) => b[1] - a[1]).slice(0, 6);
             
-            colorStats.innerHTML = analysis.favoriteColors.map(color => `
+            colorStats.innerHTML = sortedColors.length > 0 ? sortedColors.map(([color, count]) => `
                 <div class="color-stat">
                     <div class="color-stat-dot" style="background: ${colorMap[color] || '#ccc'}"></div>
                     <span class="color-stat-name">${color}</span>
+                    <span class="color-stat-count">${count}x</span>
                 </div>
-            `).join('') || '<p style="color: var(--gray-400)">Voeg kleding toe met kleuren</p>';
+            `).join('') : '<p style="color: var(--gray-400); font-size: 0.85rem;">Voeg kleding toe met kleuren</p>';
         }
         
         // Most Worn
         const mostWornList = document.getElementById('mostWornList');
-        if (mostWornList) {
+        if (mostWornList && typeof StatsManager !== 'undefined') {
             const { mostWorn } = StatsManager.getWearStats();
-            mostWornList.innerHTML = mostWorn.length > 0 ? mostWorn.map((item, i) => `
+            mostWornList.innerHTML = mostWorn.length > 0 ? mostWorn.slice(0, 5).map((item, i) => `
                 <div class="worn-item">
                     <img src="${item.image}" alt="${item.name}" class="worn-item-img">
                     <div class="worn-item-info">
@@ -377,48 +498,55 @@ const App = {
                     </div>
                     ${i === 0 ? '<span class="worn-item-badge">🔥 Top</span>' : ''}
                 </div>
-            `).join('') : '<p style="color: var(--gray-400)">Draag outfits om statistieken te zien</p>';
+            `).join('') : '<p style="color: var(--gray-400); font-size: 0.85rem;">Draag outfits om statistieken te zien</p>';
         }
         
         // Forgotten Items
         const forgottenList = document.getElementById('forgottenList');
-        if (forgottenList) {
+        if (forgottenList && typeof StatsManager !== 'undefined') {
             const { forgotten } = StatsManager.getWearStats();
-            forgottenList.innerHTML = forgotten.length > 0 ? forgotten.slice(0, 5).map(item => `
+            forgottenList.innerHTML = forgotten.length > 0 ? forgotten.slice(0, 6).map(item => `
                 <div class="forgotten-item">
                     <img src="${item.image}" alt="${item.name}">
                     <span>${item.name.split(' ')[0]}</span>
                 </div>
-            `).join('') : '<p style="color: var(--gray-600)">Geen vergeten items 🎉</p>';
+            `).join('') : '<p style="color: var(--gray-700); font-size: 0.85rem;">Geen vergeten items 🎉</p>';
         }
         
-        // Season Distribution
-        const seasonChart = document.getElementById('seasonChart');
-        if (seasonChart) {
-            const analysis = StatsManager.getStyleAnalysis();
-            const seasons = analysis.seasonDistribution;
-            seasonChart.innerHTML = `
-                <div class="season-item summer">
-                    <i class="fas fa-sun"></i>
-                    <span class="count">${seasons.summer || 0}</span>
-                    <span class="label">Zomer</span>
+        // Smart Tips
+        const smartTips = document.getElementById('smartTips');
+        if (smartTips) {
+            const tips = [];
+            const categories = { tops: 0, bottoms: 0, shoes: 0, outerwear: 0 };
+            wardrobe.forEach(item => {
+                if (categories[item.category] !== undefined) categories[item.category]++;
+            });
+            
+            if (categories.tops > categories.bottoms * 2) {
+                tips.push({ icon: 'fa-lightbulb', type: 'info', title: 'Meer broeken nodig?', desc: 'Je hebt veel meer tops dan broeken' });
+            }
+            if (categories.outerwear < 2) {
+                tips.push({ icon: 'fa-cloud-rain', type: 'warning', title: 'Weinig jassen', desc: 'Overweeg een extra jas voor slecht weer' });
+            }
+            if (wardrobe.length >= 20) {
+                tips.push({ icon: 'fa-star', type: 'success', title: 'Mooie collectie!', desc: `Je hebt ${wardrobe.length} items verzameld` });
+            }
+            if (history.length >= 10) {
+                tips.push({ icon: 'fa-fire', type: 'success', title: 'Actieve gebruiker', desc: `Al ${history.length} outfits gedragen!` });
+            }
+            if (tips.length === 0) {
+                tips.push({ icon: 'fa-rocket', type: 'info', title: 'Bouw je garderobe', desc: 'Voeg meer kleding toe voor betere inzichten' });
+            }
+            
+            smartTips.innerHTML = tips.slice(0, 3).map(tip => `
+                <div class="smart-tip">
+                    <div class="smart-tip-icon ${tip.type}"><i class="fas ${tip.icon}"></i></div>
+                    <div class="smart-tip-content">
+                        <div class="smart-tip-title">${tip.title}</div>
+                        <div class="smart-tip-desc">${tip.desc}</div>
+                    </div>
                 </div>
-                <div class="season-item winter">
-                    <i class="fas fa-snowflake"></i>
-                    <span class="count">${seasons.winter || 0}</span>
-                    <span class="label">Winter</span>
-                </div>
-                <div class="season-item spring">
-                    <i class="fas fa-leaf"></i>
-                    <span class="count">${seasons.spring || 0}</span>
-                    <span class="label">Lente</span>
-                </div>
-                <div class="season-item autumn">
-                    <i class="fas fa-cloud-sun"></i>
-                    <span class="count">${seasons.all || 0}</span>
-                    <span class="label">Altijd</span>
-                </div>
-            `;
+            `).join('');
         }
     },
 

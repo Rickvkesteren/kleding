@@ -352,28 +352,76 @@ body { font-family: var(--font); background: var(--gray-100); color: var(--gray-
 .stats-header h1 { font-size: 1.75rem; font-weight: 800; }
 .stats-header .subtitle { color: var(--gray-500); }
 .stats-card { background: white; border-radius: var(--radius-lg); padding: 20px; margin: 0 20px 16px; box-shadow: var(--shadow-sm); border: 1px solid var(--gray-200); }
-.stats-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.stats-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
 .stats-card h3 i { color: var(--primary); }
 .stats-card.small { text-align: center; padding: 20px 16px; }
-.stats-card.small i { font-size: 1.5rem; color: var(--primary); margin-bottom: 8px; }
+.stats-card.small i { font-size: 1.5rem; color: var(--primary); margin-bottom: 8px; display: block; }
 .stats-card .stat-number { display: block; font-size: 1.75rem; font-weight: 800; color: var(--primary); margin-bottom: 4px; }
 .stats-card .stat-label { font-size: 0.8rem; color: var(--gray-500); }
 .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 20px; margin-bottom: 16px; }
 .stats-row .stats-card { margin: 0; }
+.card-desc { font-size: 0.8rem; color: var(--gray-500); margin-bottom: 16px; margin-top: -4px; }
 
-/* Style Bars */
-.style-bars { display: flex; flex-direction: column; gap: 12px; }
-.style-bar { display: flex; align-items: center; gap: 12px; }
-.style-bar-label { width: 80px; font-size: 0.85rem; font-weight: 500; text-transform: capitalize; }
-.style-bar-track { flex: 1; height: 8px; background: var(--gray-200); border-radius: var(--radius-full); overflow: hidden; }
-.style-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary)); border-radius: var(--radius-full); transition: width 0.5s ease; }
-.style-bar-value { width: 40px; font-size: 0.85rem; font-weight: 600; color: var(--gray-600); text-align: right; }
+/* Balance Chart - Seizoen & Gelegenheid */
+.balance-chart { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+.balance-bar { display: flex; align-items: center; gap: 12px; }
+.balance-label { width: 70px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.balance-label i { font-size: 1rem; }
+.balance-track { flex: 1; height: 24px; background: var(--gray-100); border-radius: var(--radius-full); overflow: hidden; position: relative; }
+.balance-fill { height: 100%; border-radius: var(--radius-full); transition: width 0.5s ease; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; }
+.balance-fill span { font-size: 0.7rem; font-weight: 700; color: white; }
+.balance-fill.summer { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.balance-fill.winter { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+.balance-fill.spring { background: linear-gradient(90deg, #22c55e, #4ade80); }
+.balance-fill.all { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+.balance-fill.casual { background: linear-gradient(90deg, #06b6d4, #22d3ee); }
+.balance-fill.business { background: linear-gradient(90deg, #1e3a5a, #334155); }
+.balance-fill.sport { background: linear-gradient(90deg, #ef4444, #f87171); }
+.balance-fill.party { background: linear-gradient(90deg, #ec4899, #f472b6); }
+
+/* Balance Tips */
+.balance-tips { display: flex; flex-direction: column; gap: 8px; }
+.balance-tip { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--gray-50); border-radius: var(--radius-md); border-left: 3px solid var(--primary); }
+.balance-tip.warning { border-left-color: var(--warning); background: #fffbeb; }
+.balance-tip.success { border-left-color: var(--success); background: #f0fdf4; }
+.balance-tip i { font-size: 1rem; }
+.balance-tip.warning i { color: var(--warning); }
+.balance-tip.success i { color: var(--success); }
+.balance-tip span { font-size: 0.8rem; color: var(--gray-700); }
+
+/* Occasion Chart */
+.occasion-chart { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.occasion-item { padding: 16px; background: var(--gray-50); border-radius: var(--radius-lg); text-align: center; position: relative; overflow: hidden; }
+.occasion-item::before { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 4px; }
+.occasion-item.casual::before { background: linear-gradient(90deg, #06b6d4, #22d3ee); }
+.occasion-item.business::before { background: linear-gradient(90deg, #1e3a5a, #334155); }
+.occasion-item.sport::before { background: linear-gradient(90deg, #ef4444, #f87171); }
+.occasion-item.party::before { background: linear-gradient(90deg, #ec4899, #f472b6); }
+.occasion-icon { font-size: 1.5rem; margin-bottom: 8px; }
+.occasion-count { font-size: 1.5rem; font-weight: 800; color: var(--gray-800); }
+.occasion-label { font-size: 0.75rem; color: var(--gray-500); }
+
+/* Category Chart */
+.category-chart { display: flex; flex-direction: column; gap: 10px; }
+.category-bar { display: flex; align-items: center; gap: 12px; }
+.category-icon { width: 36px; height: 36px; background: var(--gray-100); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+.category-info { flex: 1; }
+.category-name { font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
+.category-track { height: 8px; background: var(--gray-200); border-radius: var(--radius-full); overflow: hidden; }
+.category-fill { height: 100%; background: var(--primary); border-radius: var(--radius-full); transition: width 0.5s ease; }
+.category-fill.tops { background: #6366f1; }
+.category-fill.bottoms { background: #8b5cf6; }
+.category-fill.shoes { background: #ec4899; }
+.category-fill.outerwear { background: #f59e0b; }
+.category-fill.accessories { background: #22c55e; }
+.category-count { font-size: 0.85rem; font-weight: 700; color: var(--gray-600); min-width: 30px; text-align: right; }
 
 /* Color Stats */
-.color-stats { display: flex; gap: 12px; flex-wrap: wrap; }
-.color-stat { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: var(--gray-100); border-radius: var(--radius-full); }
-.color-stat-dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: var(--shadow-sm); }
-.color-stat-name { font-size: 0.85rem; font-weight: 500; text-transform: capitalize; }
+.color-stats { display: flex; gap: 10px; flex-wrap: wrap; }
+.color-stat { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: var(--gray-50); border-radius: var(--radius-full); }
+.color-stat-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+.color-stat-name { font-size: 0.8rem; font-weight: 500; text-transform: capitalize; }
+.color-stat-count { font-size: 0.75rem; color: var(--gray-400); }
 
 /* Worn List */
 .worn-list { display: flex; flex-direction: column; gap: 12px; }
@@ -386,24 +434,25 @@ body { font-family: var(--font); background: var(--gray-100); color: var(--gray-
 
 /* Forgotten Card */
 .forgotten-card { background: linear-gradient(135deg, #fef3c7, #fde68a); border: none; }
-.forgotten-card h3 i { color: var(--warning); }
-.card-desc { font-size: 0.85rem; color: var(--gray-600); margin-bottom: 16px; }
-.forgotten-list { display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; }
+.forgotten-card h3 i { color: #d97706; }
+.forgotten-list { display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
 .forgotten-list::-webkit-scrollbar { display: none; }
-.forgotten-item { min-width: 80px; text-align: center; }
-.forgotten-item img { width: 80px; height: 80px; border-radius: var(--radius-md); object-fit: cover; margin-bottom: 6px; border: 3px solid var(--warning); }
-.forgotten-item span { font-size: 0.7rem; color: var(--gray-600); }
+.forgotten-item { min-width: 80px; text-align: center; flex-shrink: 0; }
+.forgotten-item img { width: 70px; height: 70px; border-radius: var(--radius-md); object-fit: cover; margin-bottom: 6px; border: 3px solid #d97706; }
+.forgotten-item span { font-size: 0.7rem; color: var(--gray-700); display: block; }
 
-/* Season Chart */
-.season-chart { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; text-align: center; }
-.season-item { padding: 16px 8px; background: var(--gray-100); border-radius: var(--radius-md); }
-.season-item i { font-size: 1.5rem; margin-bottom: 8px; display: block; }
-.season-item.summer i { color: #f59e0b; }
-.season-item.winter i { color: #3b82f6; }
-.season-item.spring i { color: #22c55e; }
-.season-item.autumn i { color: #f97316; }
-.season-item .count { font-size: 1.25rem; font-weight: 700; display: block; }
-.season-item .label { font-size: 0.7rem; color: var(--gray-500); }
+/* Suggestion Card */
+.suggestion-card { background: linear-gradient(135deg, #ede9fe, #ddd6fe); border: none; }
+.suggestion-card h3 i { color: #7c3aed; }
+.smart-tips { display: flex; flex-direction: column; gap: 10px; }
+.smart-tip { display: flex; align-items: flex-start; gap: 12px; padding: 12px; background: white; border-radius: var(--radius-md); }
+.smart-tip-icon { width: 36px; height: 36px; background: var(--primary); color: white; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+.smart-tip-icon.warning { background: var(--warning); }
+.smart-tip-icon.success { background: var(--success); }
+.smart-tip-icon.info { background: #3b82f6; }
+.smart-tip-content { flex: 1; }
+.smart-tip-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 2px; }
+.smart-tip-desc { font-size: 0.75rem; color: var(--gray-500); }
 
 /* ===== COMMUNITY PAGE ===== */
 .community-header { padding: 50px 20px 20px; }
