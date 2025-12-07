@@ -56,6 +56,19 @@ body { font-family: var(--font); background: var(--gray-100); color: var(--gray-
 .weather-advice { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: rgba(255,255,255,0.2); border-radius: var(--radius-md); font-size: 0.85rem; }
 .weather-advice i { color: #fbbf24; }
 
+/* Day Type Selector */
+.day-type-section { padding: 16px 20px; background: white; border-bottom: 1px solid var(--gray-100); }
+.day-type-label { font-size: 0.8rem; font-weight: 600; color: var(--gray-500); display: block; margin-bottom: 10px; }
+.day-type-options { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.day-type-options::-webkit-scrollbar { display: none; }
+.day-type-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 14px; min-width: 60px; background: var(--gray-100); border: 2px solid transparent; border-radius: var(--radius-lg); cursor: pointer; font-family: var(--font); transition: all 0.2s; }
+.day-type-btn i { font-size: 1.1rem; color: var(--gray-500); }
+.day-type-btn span { font-size: 0.7rem; font-weight: 600; color: var(--gray-600); }
+.day-type-btn:hover { background: var(--gray-200); }
+.day-type-btn.active { background: rgba(99,102,241,0.1); border-color: var(--primary); }
+.day-type-btn.active i { color: var(--primary); }
+.day-type-btn.active span { color: var(--primary); }
+
 /* Today Outfit */
 .todays-outfit-section { padding: 20px; }
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }

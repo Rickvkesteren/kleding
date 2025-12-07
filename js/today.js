@@ -5,6 +5,7 @@
 
 const TodayManager = {
     weather: null,
+    dayType: 'casual', // casual, work, sport, date, party
     currentOutfit: {
         outerwear: null,
         top: null,
@@ -15,6 +16,9 @@ const TodayManager = {
     async init() {
         console.log('📅 TodayManager initialiseren...');
         
+        // Load saved day type
+        this.dayType = localStorage.getItem('dayType') || 'casual';
+        
         // Load weather
         await this.loadWeather();
         
@@ -23,6 +27,36 @@ const TodayManager = {
         
         // Setup event listeners
         this.setupEventListeners();
+        
+        // Setup day type selector
+        this.setupDayTypeSelector();
+    },
+    
+    setupDayTypeSelector() {
+        const buttons = document.querySelectorAll('.day-type-btn');
+        buttons.forEach(btn => {
+            // Set active state from saved preference
+            btn.classList.toggle('active', btn.dataset.type === this.dayType);
+            
+            btn.addEventListener('click', () => {
+                // Update active state
+                buttons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // Save and apply
+                this.dayType = btn.dataset.type;
+                localStorage.setItem('dayType', this.dayType);
+                
+                // Generate new outfit based on day type
+                this.generateOutfit();
+                
+                // Show feedback
+                if (typeof App !== 'undefined' && App.showSuccess) {
+                    const labels = { casual: 'Thuis', work: 'Werk', sport: 'Sport', date: 'Date', party: 'Uitgaan' };
+                    App.showSuccess(`${labels[this.dayType]} mode`, 'Outfit aangepast!');
+                }
+            });
+        });
     },
 
     async loadWeather() {
@@ -154,12 +188,37 @@ const TodayManager = {
             shoes: wardrobe.filter(item => item.category === 'shoes')
         };
         
-        // Select random items from each category
+        // Apply day type filtering
+        const filterByDayType = (items) => {
+            if (items.length === 0) return items;
+            
+            // Define keywords for each day type
+            const dayTypeKeywords = {
+                work: ['werk', 'zakelijk', 'business', 'blazer', 'overhemd', 'pantalon', 'nette'],
+                sport: ['sport', 'gym', 'training', 'sneaker', 'jogging', 'fitness'],
+                date: ['date', 'chic', 'mooi', 'elegant', 'feest'],
+                party: ['party', 'feest', 'uitgaan', 'club', 'glitter'],
+                casual: ['casual', 'thuis', 'relax', 'comfy']
+            };
+            
+            const keywords = dayTypeKeywords[this.dayType] || [];
+            
+            // Try to find matching items
+            const matched = items.filter(item => {
+                const searchText = `${item.name || ''} ${(item.tags || []).join(' ')}`.toLowerCase();
+                return keywords.some(kw => searchText.includes(kw));
+            });
+            
+            // If we found matches, prefer those; otherwise return all
+            return matched.length > 0 ? matched : items;
+        };
+        
+        // Select items with day type preference
         this.currentOutfit = {
-            outerwear: this.weather.temp < 18 ? this.getRandomItem(categories.outerwear) : null,
-            top: this.getRandomItem(categories.tops),
-            bottom: this.getRandomItem(categories.bottoms),
-            shoes: this.getRandomItem(categories.shoes)
+            outerwear: this.weather.temp < 18 ? this.getRandomItem(filterByDayType(categories.outerwear)) : null,
+            top: this.getRandomItem(filterByDayType(categories.tops)),
+            bottom: this.getRandomItem(filterByDayType(categories.bottoms)),
+            shoes: this.getRandomItem(filterByDayType(categories.shoes))
         };
         
         // Save today's outfit
