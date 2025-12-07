@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>StyleMate - Jouw Persoonlijke Outfit Assistent</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style-new.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+</head>
+<body>
+    <div class="app-container">
+        <!-- ===== VANDAAG PAGE (Home) ===== -->
+        <section class="page active" id="todayPage">
+            <!-- Weather Header -->
+            <header class="today-header">
+                <div class="greeting-section">
+                    <span class="date-label" id="currentDate">Zaterdag 7 December</span>
+                    <h1>Goedemorgen! ☀️</h1>
+                </div>
+                <div class="weather-card" id="weatherCard">
+                    <div class="weather-main">
+                        <i class="fas fa-cloud-sun weather-icon"></i>
+                        <div class="weather-temp">
+                            <span class="temp-value" id="tempValue">8</span>
+                            <span class="temp-unit">°C</span>
+                        </div>
+                    </div>
+                    <div class="weather-details">
+                        <span class="weather-desc" id="weatherDesc">Bewolkt</span>
+                        <span class="weather-feels">Voelt als 5°C</span>
+                    </div>
+                    <div class="weather-advice" id="weatherAdvice">
+                        <i class="fas fa-lightbulb"></i>
+                        <span>Pak een warme jas mee!</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Today's Outfit Suggestion -->
+            <div class="todays-outfit-section">
+                <div class="section-header">
+                    <h2>Jouw Look van Vandaag</h2>
+                    <button class="btn-refresh" id="refreshOutfit">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+
+                <!-- Main Outfit Display -->
+                <div class="outfit-display" id="outfitDisplay">
+                    <!-- Outfit items worden hier gerenderd -->
+                    <div class="outfit-stack">
+                        <div class="outfit-layer outerwear" data-category="outerwear" id="todayOuterwear">
+                            <div class="layer-placeholder">
+                                <i class="fas fa-vest"></i>
+                                <span>Jas</span>
+                            </div>
+                        </div>
+                        <div class="outfit-layer top" data-category="tops" id="todayTop">
+                            <div class="layer-placeholder">
+                                <i class="fas fa-tshirt"></i>
+                                <span>Top</span>
+                            </div>
+                        </div>
+                        <div class="outfit-layer bottom" data-category="bottoms" id="todayBottom">
+                            <div class="layer-placeholder">
+                                <i class="fas fa-socks"></i>
+                                <span>Broek</span>
+                            </div>
+                        </div>
+                        <div class="outfit-layer shoes" data-category="shoes" id="todayShoes">
+                            <div class="layer-placeholder">
+                                <i class="fas fa-shoe-prints"></i>
+                                <span>Schoenen</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tap hint -->
+                    <div class="tap-hint">
+                        <i class="fas fa-hand-pointer"></i>
+                        <span>Tik op een item om te wisselen</span>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="outfit-actions">
+                    <button class="btn-action shuffle" id="shuffleAll">
+                        <i class="fas fa-random"></i>
+                        <span>Shuffle Alles</span>
+                    </button>
+                    <button class="btn-action accept" id="acceptOutfit">
+                        <i class="fas fa-check"></i>
+                        <span>Dit draag ik!</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Missing Items Alert -->
+            <div class="missing-alert" id="missingAlert" style="display: none;">
+                <div class="alert-content">
+                    <i class="fas fa-shopping-bag"></i>
+                    <div class="alert-text">
+                        <strong>Mis je iets?</strong>
+                        <span>Bekijk suggesties uit de shop</span>
+                    </div>
+                </div>
+                <button class="btn-shop-suggest" id="shopSuggestBtn">
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- Recent Outfits -->
+            <div class="recent-section">
+                <h3>Recent Gedragen</h3>
+                <div class="recent-scroll" id="recentOutfits">
+                    <!-- Recent outfits komen hier -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SWIPE PAGE (Item Selector) ===== -->
+        <section class="page" id="swipePage">
+            <header class="swipe-header">
+                <button class="btn-back" id="swipeBack">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="swipe-title">
+                    <span class="swipe-category" id="swipeCategory">Tops</span>
+                    <span class="swipe-subtitle">Kies wat je mooi vindt</span>
+                </div>
+                <div class="swipe-progress">
+                    <span id="swipeProgress">1/12</span>
+                </div>
+            </header>
+
+            <!-- Source Toggle -->
+            <div class="source-toggle-bar">
+                <button class="source-tab active" data-source="wardrobe">
+                    <i class="fas fa-door-open"></i>
+                    <span>Mijn Kast</span>
+                </button>
+                <button class="source-tab" data-source="shop">
+                    <i class="fas fa-shopping-bag"></i>
+                    <span>Shop Nieuw</span>
+                </button>
+            </div>
+
+            <!-- Swipe Card Stack -->
+            <div class="swipe-container">
+                <div class="card-stack" id="cardStack">
+                    <!-- Cards worden hier dynamisch toegevoegd -->
+                </div>
+
+                <!-- Current Swipe Card -->
+                <div class="swipe-card" id="mainSwipeCard">
+                    <div class="card-image">
+                        <img src="" alt="Item" id="swipeCardImage">
+                        <div class="card-badge" id="swipeCardBadge">
+                            <i class="fas fa-home"></i> Eigen
+                        </div>
+                        <div class="swipe-overlay like">
+                            <i class="fas fa-heart"></i>
+                            <span>LIKE</span>
+                        </div>
+                        <div class="swipe-overlay nope">
+                            <i class="fas fa-times"></i>
+                            <span>NOPE</span>
+                        </div>
+                    </div>
+                    <div class="card-info">
+                        <h3 id="swipeCardName">Item Naam</h3>
+                        <p id="swipeCardDetails">Kleur • Stijl</p>
+                        <div class="card-price" id="swipeCardPrice" style="display: none;">
+                            <span class="price">€29,99</span>
+                            <span class="original-price">€39,99</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div class="swipe-empty" id="swipeEmpty" style="display: none;">
+                    <i class="fas fa-check-circle"></i>
+                    <h3>Alles bekeken!</h3>
+                    <p>Je hebt alle items in deze categorie gezien</p>
+                    <button class="btn-primary" id="swipeRestart">Opnieuw bekijken</button>
+                </div>
+            </div>
+
+            <!-- Swipe Actions -->
+            <div class="swipe-actions">
+                <button class="swipe-btn nope" id="btnSwipeLeft">
+                    <i class="fas fa-times"></i>
+                </button>
+                <button class="swipe-btn undo" id="btnUndo">
+                    <i class="fas fa-undo"></i>
+                </button>
+                <button class="swipe-btn like" id="btnSwipeRight">
+                    <i class="fas fa-heart"></i>
+                </button>
+            </div>
+
+            <!-- Shop CTA (alleen bij shop items) -->
+            <div class="shop-cta" id="shopCta" style="display: none;">
+                <button class="btn-buy" id="btnBuyItem">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>Direct Bestellen</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- ===== KLEDINGKAST PAGE ===== -->
+        <section class="page" id="wardrobePage">
+            <header class="wardrobe-header">
+                <h1>Mijn Kast</h1>
+                <button class="btn-add-clothes" id="addClothesBtn">
+                    <i class="fas fa-camera"></i>
+                    <span>Toevoegen</span>
+                </button>
+            </header>
+
+            <!-- Stats Bar -->
+            <div class="wardrobe-stats">
+                <div class="stat">
+                    <span class="stat-value" id="totalItems">0</span>
+                    <span class="stat-label">Items</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value" id="totalOutfits">0</span>
+                    <span class="stat-label">Outfits</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value" id="favoriteCount">0</span>
+                    <span class="stat-label">Favorieten</span>
+                </div>
+            </div>
+
+            <!-- Category Tabs -->
+            <div class="category-tabs">
+                <button class="cat-tab active" data-category="all">
+                    <i class="fas fa-th"></i>
+                    <span>Alles</span>
+                </button>
+                <button class="cat-tab" data-category="tops">
+                    <i class="fas fa-tshirt"></i>
+                    <span>Tops</span>
+                </button>
+                <button class="cat-tab" data-category="bottoms">
+                    <i class="fas fa-socks"></i>
+                    <span>Broeken</span>
+                </button>
+                <button class="cat-tab" data-category="outerwear">
+                    <i class="fas fa-vest"></i>
+                    <span>Jassen</span>
+                </button>
+                <button class="cat-tab" data-category="shoes">
+                    <i class="fas fa-shoe-prints"></i>
+                    <span>Schoenen</span>
+                </button>
+            </div>
+
+            <!-- Clothing Grid -->
+            <div class="clothing-grid" id="clothingGrid">
+                <!-- Items worden hier geladen -->
+            </div>
+
+            <!-- Empty State -->
+            <div class="empty-wardrobe" id="emptyWardrobe" style="display: none;">
+                <div class="empty-illustration">
+                    <i class="fas fa-door-open"></i>
+                </div>
+                <h3>Je kast is nog leeg</h3>
+                <p>Voeg je eerste kledingstukken toe door een foto te maken</p>
+                <button class="btn-primary" id="emptyAddBtn">
+                    <i class="fas fa-camera"></i>
+                    Start met fotograferen
+                </button>
+            </div>
+        </section>
+
+        <!-- ===== SHOP PAGE ===== -->
+        <section class="page" id="shopPage">
+            <header class="shop-header">
+                <h1>Shop</h1>
+                <span class="shop-subtitle">Vind nieuwe favorieten</span>
+            </header>
+
+            <!-- Personalized Suggestions -->
+            <div class="shop-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-magic"></i> Voor Jou</h2>
+                    <span class="badge-new">Nieuw</span>
+                </div>
+                <p class="section-desc">Gebaseerd op jouw stijl en kast</p>
+                
+                <div class="shop-scroll" id="personalizedShop">
+                    <!-- Gepersonaliseerde items -->
+                </div>
+            </div>
+
+            <!-- Missing in Your Wardrobe -->
+            <div class="shop-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-puzzle-piece"></i> Past bij je kast</h2>
+                </div>
+                <p class="section-desc">Deze items matchen perfect</p>
+                
+                <div class="shop-scroll" id="matchingShop">
+                    <!-- Matching items -->
+                </div>
+            </div>
+
+            <!-- Complete Sets -->
+            <div class="shop-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-layer-group"></i> Complete Outfits</h2>
+                </div>
+                <div class="sets-grid" id="shopSets">
+                    <!-- Complete sets -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SAVED OUTFITS PAGE ===== -->
+        <section class="page" id="savedPage">
+            <header class="saved-header">
+                <h1>Opgeslagen</h1>
+            </header>
+
+            <div class="saved-tabs">
+                <button class="saved-tab active" data-tab="outfits">Outfits</button>
+                <button class="saved-tab" data-tab="favorites">Favorieten</button>
+                <button class="saved-tab" data-tab="history">Geschiedenis</button>
+            </div>
+
+            <div class="saved-content" id="savedContent">
+                <!-- Opgeslagen outfits -->
+            </div>
+        </section>
+
+        <!-- ===== BOTTOM NAVIGATION ===== -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-page="todayPage">
+                <i class="fas fa-sun"></i>
+                <span>Vandaag</span>
+            </button>
+            <button class="nav-item" data-page="wardrobePage">
+                <i class="fas fa-door-open"></i>
+                <span>Kast</span>
+            </button>
+            <button class="nav-item" data-page="shopPage">
+                <i class="fas fa-shopping-bag"></i>
+                <span>Shop</span>
+            </button>
+            <button class="nav-item" data-page="savedPage">
+                <i class="fas fa-bookmark"></i>
+                <span>Opgeslagen</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- ===== MODALS ===== -->
+    
+    <!-- Add Clothing Modal -->
+    <div class="modal" id="addClothingModal">
+        <div class="modal-content modal-full">
+            <div class="modal-header">
+                <button class="btn-close-modal" id="closeAddModal">
+                    <i class="fas fa-times"></i>
+                </button>
+                <h2>Kledingstuk Toevoegen</h2>
+                <button class="btn-save" id="saveClothing" disabled>Opslaan</button>
+            </div>
+
+            <!-- Photo Capture Section -->
+            <div class="photo-capture-section">
+                <div class="photo-preview" id="photoPreview">
+                    <div class="photo-placeholder">
+                        <i class="fas fa-tshirt"></i>
+                        <span>Maak een foto van je kledingstuk</span>
+                    </div>
+                </div>
+                
+                <div class="photo-actions">
+                    <button class="photo-btn primary" id="takePhotoBtn">
+                        <i class="fas fa-camera"></i>
+                        <span>Camera</span>
+                    </button>
+                    <button class="photo-btn" id="uploadPhotoBtn">
+                        <i class="fas fa-images"></i>
+                        <span>Galerij</span>
+                    </button>
+                </div>
+                <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
+                <input type="file" id="galleryInput" accept="image/*" hidden>
+
+                <!-- Photo Tips -->
+                <div class="photo-tips">
+                    <div class="tip">
+                        <i class="fas fa-lightbulb"></i>
+                        <span>Leg het plat op een neutrale achtergrond</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Details Form (shown after photo) -->
+            <div class="details-form" id="detailsForm" style="display: none;">
+                <div class="form-group">
+                    <label>Naam</label>
+                    <input type="text" id="itemName" placeholder="bijv. Blauwe Spijkerbroek">
+                </div>
+                
+                <div class="form-group">
+                    <label>Categorie</label>
+                    <div class="category-select" id="categorySelect">
+                        <button class="cat-option" data-value="tops">
+                            <i class="fas fa-tshirt"></i>
+                            <span>Top</span>
+                        </button>
+                        <button class="cat-option" data-value="bottoms">
+                            <i class="fas fa-socks"></i>
+                            <span>Broek</span>
+                        </button>
+                        <button class="cat-option" data-value="outerwear">
+                            <i class="fas fa-vest"></i>
+                            <span>Jas</span>
+                        </button>
+                        <button class="cat-option" data-value="shoes">
+                            <i class="fas fa-shoe-prints"></i>
+                            <span>Schoenen</span>
+                        </button>
+                        <button class="cat-option" data-value="accessories">
+                            <i class="fas fa-glasses"></i>
+                            <span>Accessoire</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label>Kleur</label>
+                        <div class="color-select" id="colorSelect">
+                            <button class="color-dot" data-color="white" style="background: #f5f5f5;"></button>
+                            <button class="color-dot" data-color="black" style="background: #1a1a1a;"></button>
+                            <button class="color-dot" data-color="gray" style="background: #6b7280;"></button>
+                            <button class="color-dot" data-color="blue" style="background: #3b82f6;"></button>
+                            <button class="color-dot" data-color="red" style="background: #ef4444;"></button>
+                            <button class="color-dot" data-color="green" style="background: #22c55e;"></button>
+                            <button class="color-dot" data-color="yellow" style="background: #eab308;"></button>
+                            <button class="color-dot" data-color="pink" style="background: #ec4899;"></button>
+                            <button class="color-dot" data-color="purple" style="background: #8b5cf6;"></button>
+                            <button class="color-dot" data-color="orange" style="background: #f97316;"></button>
+                            <button class="color-dot" data-color="brown" style="background: #92400e;"></button>
+                            <button class="color-dot" data-color="beige" style="background: #d4a574;"></button>
+                        </div>
+                    </div>
+                    <div class="form-group half">
+                        <label>Seizoen</label>
+                        <div class="season-select" id="seasonSelect">
+                            <button class="season-btn" data-value="all">
+                                <i class="fas fa-infinity"></i> Altijd
+                            </button>
+                            <button class="season-btn" data-value="summer">
+                                <i class="fas fa-sun"></i> Zomer
+                            </button>
+                            <button class="season-btn" data-value="winter">
+                                <i class="fas fa-snowflake"></i> Winter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Outfit Saved Modal -->
+    <div class="modal" id="outfitSavedModal">
+        <div class="modal-content modal-small">
+            <div class="success-animation">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h2>Outfit Opgeslagen!</h2>
+            <p>Je look van vandaag is bewaard</p>
+            <button class="btn-primary" id="closeSavedModal">Perfect!</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/app-new.js"></script>
+    <script src="js/today.js"></script>
+    <script src="js/swipe-new.js"></script>
+    <script src="js/wardrobe-new.js"></script>
+</body>
+</html>
