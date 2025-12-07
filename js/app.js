@@ -152,23 +152,133 @@ const DataManager = {
 
 // ==================== WEATHER MANAGER ====================
 const WeatherManager = {
-    // Mock weather data (can be replaced with real API)
+    // Real weather from Open-Meteo API (free, no key needed)
     async getWeather() {
-        // Simulate API call
-        const conditions = ['sunny', 'cloudy', 'rainy', 'partly-cloudy', 'cold'];
-        const randomCondition = conditions[Math.floor(Math.random() * conditions.length)];
-        
-        const weatherData = {
-            sunny: { temp: 24, feels: 26, desc: 'Zonnig', icon: '☀️', advice: 'Perfecte dag voor lichte kleding!' },
-            cloudy: { temp: 18, feels: 17, desc: 'Bewolkt', icon: '☁️', advice: 'Een lichte jas is handig' },
-            rainy: { temp: 14, feels: 12, desc: 'Regenachtig', icon: '🌧️', advice: 'Vergeet je regenjas niet!' },
-            'partly-cloudy': { temp: 20, feels: 19, desc: 'Halfbewolkt', icon: '⛅', advice: 'Laagjes zijn ideaal vandaag' },
-            cold: { temp: 6, feels: 3, desc: 'Koud', icon: '❄️', advice: 'Kleed je warm aan!' }
+        try {
+            // Get user's GPS location
+            const coords = await this.getCurrentLocation();
+            
+            // Fetch real weather from Open-Meteo
+            const response = await fetch(
+                `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m&timezone=auto`
+            );
+            
+            if (!response.ok) throw new Error('Weather API error');
+            
+            const data = await response.json();
+            const current = data.current;
+            
+            // Map weather code to condition
+            const condition = this.mapWeatherCode(current.weather_code);
+            const weatherInfo = this.getWeatherInfo(condition, current.temperature_2m);
+            
+            // Get city name from coordinates
+            const cityName = await this.getCityName(coords.lat, coords.lon);
+            
+            return {
+                temp: Math.round(current.temperature_2m),
+                feels: Math.round(current.apparent_temperature),
+                desc: weatherInfo.desc,
+                icon: weatherInfo.icon,
+                advice: weatherInfo.advice,
+                condition: condition,
+                humidity: current.relative_humidity_2m,
+                wind: Math.round(current.wind_speed_10m),
+                city: cityName,
+                isReal: true
+            };
+        } catch (error) {
+            console.error('Weather fetch error:', error);
+            return this.getFallbackWeather();
+        }
+    },
+    
+    // Get GPS coordinates
+    async getCurrentLocation() {
+        return new Promise((resolve) => {
+            if (!navigator.geolocation) {
+                // Default to Amsterdam
+                resolve({ lat: 52.3676, lon: 4.9041 });
+                return;
+            }
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    resolve({
+                        lat: position.coords.latitude,
+                        lon: position.coords.longitude
+                    });
+                },
+                (error) => {
+                    console.warn('Geolocation denied, using Amsterdam:', error.message);
+                    resolve({ lat: 52.3676, lon: 4.9041 });
+                },
+                { timeout: 5000, enableHighAccuracy: false }
+            );
+        });
+    },
+    
+    // Get city name from coordinates using reverse geocoding
+    async getCityName(lat, lon) {
+        try {
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=nl`
+            );
+            const data = await response.json();
+            return data.address?.city || data.address?.town || data.address?.village || 'Nederland';
+        } catch {
+            return 'Nederland';
+        }
+    },
+    
+    // Map Open-Meteo weather codes to conditions
+    mapWeatherCode(code) {
+        // WMO Weather interpretation codes
+        if (code === 0) return 'sunny';
+        if (code === 1 || code === 2) return 'partly-cloudy';
+        if (code === 3) return 'cloudy';
+        if (code >= 45 && code <= 48) return 'cloudy'; // Fog
+        if (code >= 51 && code <= 67) return 'rainy'; // Drizzle, Rain
+        if (code >= 71 && code <= 77) return 'cold'; // Snow
+        if (code >= 80 && code <= 82) return 'rainy'; // Rain showers
+        if (code >= 85 && code <= 86) return 'cold'; // Snow showers
+        if (code >= 95 && code <= 99) return 'rainy'; // Thunderstorm
+        return 'partly-cloudy';
+    },
+    
+    // Get weather info based on condition and temp
+    getWeatherInfo(condition, temp) {
+        const info = {
+            sunny: { desc: 'Zonnig', icon: '☀️', advice: 'Perfecte dag voor lichte kleding!' },
+            cloudy: { desc: 'Bewolkt', icon: '☁️', advice: 'Een lichte jas is handig' },
+            rainy: { desc: 'Regenachtig', icon: '🌧️', advice: 'Vergeet je regenjas niet!' },
+            'partly-cloudy': { desc: 'Halfbewolkt', icon: '⛅', advice: 'Laagjes zijn ideaal vandaag' },
+            cold: { desc: 'Koud', icon: '❄️', advice: 'Kleed je warm aan!' }
         };
         
+        // Adjust advice based on temperature
+        let result = { ...info[condition] };
+        if (temp >= 25) {
+            result.advice = 'Warm weer! Kies lichte, luchtige kleding.';
+        } else if (temp <= 5) {
+            result.advice = 'Kleed je extra warm aan vandaag!';
+            result.icon = '❄️';
+        }
+        
+        return result;
+    },
+    
+    // Fallback when API fails
+    getFallbackWeather() {
         return {
-            ...weatherData[randomCondition],
-            condition: randomCondition
+            temp: 18,
+            feels: 17,
+            desc: 'Halfbewolkt',
+            icon: '⛅',
+            advice: 'Laagjes zijn ideaal vandaag',
+            condition: 'partly-cloudy',
+            city: 'Nederland',
+            isReal: false
         };
     },
 
@@ -991,16 +1101,23 @@ const App = {
 
 // ==================== DOM READY ====================
 document.addEventListener('DOMContentLoaded', () => {
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+            .then(reg => console.log('✅ Service Worker geregistreerd'))
+            .catch(err => console.log('Service Worker registratie overgeslagen'));
+    }
+    
     // Add demo data if wardrobe is empty
     if (DataManager.getWardrobe().length === 0) {
         const demoItems = [
-            { name: 'Donkere Winterjas', category: 'outerwear', color: 'black', image: 'https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=400', season: 'winter' },
-            { name: 'Witte T-shirt', category: 'tops', color: 'white', image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400', season: 'all' },
-            { name: 'Blauwe Trui', category: 'tops', color: 'blue', image: 'https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=400', season: 'winter' },
-            { name: 'Slim Fit Jeans', category: 'bottoms', color: 'navy', image: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=400', season: 'all' },
-            { name: 'Beige Chino', category: 'bottoms', color: 'beige', image: 'https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=400', season: 'all' },
-            { name: 'Witte Sneakers', category: 'shoes', color: 'white', image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400', season: 'all' },
-            { name: 'Bruine Boots', category: 'shoes', color: 'brown', image: 'https://images.unsplash.com/photo-1638247025967-b4e38f787b76?w=400', season: 'winter' }
+            { name: 'Donkere Winterjas', category: 'outerwear', color: 'black', image: 'https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=400', season: 'winter', wearCount: 0 },
+            { name: 'Witte T-shirt', category: 'tops', color: 'white', image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400', season: 'all', wearCount: 0 },
+            { name: 'Blauwe Trui', category: 'tops', color: 'blue', image: 'https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=400', season: 'winter', wearCount: 0 },
+            { name: 'Slim Fit Jeans', category: 'bottoms', color: 'navy', image: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=400', season: 'all', wearCount: 0 },
+            { name: 'Beige Chino', category: 'bottoms', color: 'beige', image: 'https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=400', season: 'all', wearCount: 0 },
+            { name: 'Witte Sneakers', category: 'shoes', color: 'white', image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400', season: 'all', wearCount: 0 },
+            { name: 'Bruine Boots', category: 'shoes', color: 'brown', image: 'https://images.unsplash.com/photo-1638247025967-b4e38f787b76?w=400', season: 'winter', wearCount: 0 }
         ];
         
         demoItems.forEach(item => DataManager.addClothingItem(item));

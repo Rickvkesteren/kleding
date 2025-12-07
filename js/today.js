@@ -97,8 +97,20 @@ const TodayManager = {
             iconEl.className = `fas ${iconMap[this.weather.condition] || 'fa-cloud-sun'} weather-icon`;
         }
         if (tempValueEl) tempValueEl.textContent = this.weather.temp;
-        if (weatherDescEl) weatherDescEl.textContent = this.weather.desc;
-        if (weatherFeelsEl) weatherFeelsEl.textContent = `Voelt als ${this.weather.feels}°`;
+        
+        // Show description with city if available
+        if (weatherDescEl) {
+            const cityText = this.weather.city ? ` in ${this.weather.city}` : '';
+            weatherDescEl.textContent = `${this.weather.desc}${cityText}`;
+        }
+        
+        // Show "feels like" with extra info
+        if (weatherFeelsEl) {
+            let feelsText = `Voelt als ${this.weather.feels}°`;
+            if (this.weather.wind) feelsText += ` • Wind ${this.weather.wind} km/u`;
+            weatherFeelsEl.textContent = feelsText;
+        }
+        
         if (adviceEl) adviceEl.textContent = this.weather.advice;
         
         // Update greeting based on time
@@ -383,8 +395,36 @@ const TodayManager = {
         DataManager.saveOutfit(outfit);
         DataManager.addToHistory(outfit);
         
+        // Update wear count for each item in the outfit
+        this.updateWearCounts();
+        
         // Show success
         App.showSuccess('Outfit opgeslagen! 🎉', 'Je outfit staat nu bij je opgeslagen looks');
+        
+        // Refresh recent outfits
+        this.loadRecentOutfits();
+    },
+    
+    updateWearCounts() {
+        const wardrobe = DataManager.getWardrobe();
+        const slots = ['outerwear', 'top', 'bottom', 'shoes'];
+        let updated = false;
+        
+        slots.forEach(slot => {
+            const item = this.currentOutfit[slot];
+            if (item && item.id) {
+                const wardrobeItem = wardrobe.find(w => w.id === item.id);
+                if (wardrobeItem) {
+                    wardrobeItem.wearCount = (wardrobeItem.wearCount || 0) + 1;
+                    wardrobeItem.lastWorn = new Date().toISOString();
+                    updated = true;
+                }
+            }
+        });
+        
+        if (updated) {
+            DataManager.saveWardrobe(wardrobe);
+        }
     },
 
     // Called when switching to today page

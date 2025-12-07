@@ -311,29 +311,27 @@ const RealWeatherAPI = {
 const StatsManager = {
     // Get wear statistics
     getWearStats() {
-        const history = DataManager.getHistory();
         const wardrobe = DataManager.getWardrobe();
         
-        // Count wears per item
-        const wearCount = {};
-        history.forEach(outfit => {
-            ['outerwear', 'top', 'bottom', 'shoes'].forEach(slot => {
-                if (outfit[slot]?.id) {
-                    wearCount[outfit[slot].id] = (wearCount[outfit[slot].id] || 0) + 1;
-                }
-            });
-        });
-        
-        // Sort items by wear count
+        // Get wear count directly from items (updated when outfit accepted)
         const itemsWithCount = wardrobe.map(item => ({
             ...item,
-            wearCount: wearCount[item.id] || 0,
-            lastWorn: this.getLastWorn(item.id, history)
+            wearCount: item.wearCount || 0,
+            lastWorn: item.lastWorn || null
         }));
         
-        const mostWorn = [...itemsWithCount].sort((a, b) => b.wearCount - a.wearCount).slice(0, 5);
-        const leastWorn = [...itemsWithCount].sort((a, b) => a.wearCount - b.wearCount).slice(0, 5);
+        const mostWorn = [...itemsWithCount]
+            .sort((a, b) => b.wearCount - a.wearCount)
+            .slice(0, 5);
+        
+        const leastWorn = [...itemsWithCount]
+            .filter(item => item.wearCount > 0)
+            .sort((a, b) => a.wearCount - b.wearCount)
+            .slice(0, 5);
+        
+        // Forgotten = never worn OR not worn in 30+ days
         const forgotten = itemsWithCount.filter(item => {
+            if (item.wearCount === 0) return true;
             if (!item.lastWorn) return true;
             const daysSinceWorn = (Date.now() - new Date(item.lastWorn).getTime()) / (1000 * 60 * 60 * 24);
             return daysSinceWorn > 30;
