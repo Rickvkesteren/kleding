@@ -1,592 +1,311 @@
-// Swipe functionaliteit voor outfit builder - Verbeterde versie
+/**
+ * StyleMate - Swipe Manager
+ * Handles Tinder-style swiping for items and sets
+ */
 
 const SwipeManager = {
     currentCategory: null,
-    currentItems: [],
+    currentSource: 'wardrobe', // 'wardrobe' or 'shop'
+    items: [],
     currentIndex: 0,
-    selectedItems: {
-        outerwear: null,
-        tops: null,
-        bottoms: null,
-        shoes: null
-    },
-    suggestedOutfit: null,
+    isDragging: false,
+    startX: 0,
+    startY: 0,
+    currentX: 0,
+    threshold: 100,
 
     init() {
-        this.bindEvents();
-        this.generateSmartSuggestion();
+        console.log('👆 SwipeManager initialiseren...');
+        this.setupEventListeners();
     },
 
-    bindEvents() {
-        // Category tabs
-        document.querySelectorAll('.cat-tab').forEach(tab => {
-            tab.addEventListener('click', () => this.selectCategory(tab.dataset.category));
-        });
-
-        // Swipe buttons
-        const leftBtn = document.getElementById('swipeLeft');
-        const rightBtn = document.getElementById('swipeRight');
-        const skipBtn = document.getElementById('swipeSkip');
+    startSwipe(category, source = 'wardrobe') {
+        this.currentCategory = category;
+        this.currentSource = source;
+        this.currentIndex = 0;
         
-        if (leftBtn) leftBtn.addEventListener('click', () => this.swipe('left'));
-        if (rightBtn) rightBtn.addEventListener('click', () => this.swipe('right'));
-        if (skipBtn) skipBtn.addEventListener('click', () => this.skipCategory());
+        // Load items
+        this.loadItems();
+        
+        // Update UI
+        this.updateHeader();
+        this.updateSourceTabs();
+        this.renderCurrentCard();
+    },
 
-        // Save outfit button
-        const saveBtn = document.getElementById('saveSwipeOutfit');
-        if (saveBtn) saveBtn.addEventListener('click', () => this.saveOutfit());
+    loadItems() {
+        if (this.currentSource === 'wardrobe') {
+            const wardrobe = DataManager.getWardrobe();
+            this.items = wardrobe.filter(item => 
+                item.category === this.currentCategory
+            );
+        } else {
+            // Load from shop
+            this.items = ShopManager.items.filter(item => 
+                item.category === this.currentCategory
+            );
+        }
+    },
 
-        // Reset button
-        const resetBtn = document.getElementById('resetOutfitBtn');
-        if (resetBtn) resetBtn.addEventListener('click', () => this.resetOutfit());
+    updateHeader() {
+        const categoryEl = document.querySelector('.swipe-category');
+        const subtitleEl = document.querySelector('.swipe-subtitle');
+        const progressEl = document.querySelector('.swipe-progress');
+        
+        const categoryNames = {
+            tops: 'Bovenstukken',
+            bottoms: 'Onderstukken',
+            outerwear: 'Jassen',
+            shoes: 'Schoenen',
+            accessories: 'Accessoires'
+        };
+        
+        if (categoryEl) categoryEl.textContent = categoryNames[this.currentCategory] || this.currentCategory;
+        if (subtitleEl) subtitleEl.textContent = this.currentSource === 'wardrobe' ? 'Kies uit je kast' : 'Kies uit de shop';
+        if (progressEl) progressEl.textContent = `${this.currentIndex + 1}/${this.items.length}`;
+    },
 
-        // Accept full outfit button
-        const acceptBtn = document.getElementById('acceptFullOutfit');
-        if (acceptBtn) acceptBtn.addEventListener('click', () => this.acceptFullSuggestion());
+    updateSourceTabs() {
+        document.querySelectorAll('.source-tab').forEach(tab => {
+            const isActive = tab.dataset.source === this.currentSource;
+            tab.classList.toggle('active', isActive);
+        });
+    },
 
-        // Customize button
-        const customizeBtn = document.getElementById('customizeOutfit');
-        if (customizeBtn) customizeBtn.addEventListener('click', () => this.startCustomizing());
+    renderCurrentCard() {
+        const card = document.getElementById('mainSwipeCard');
+        const cardImage = document.getElementById('swipeCardImage');
+        const cardName = document.getElementById('swipeCardName');
+        const cardDetails = document.getElementById('swipeCardDetails');
+        const cardBadge = document.getElementById('swipeCardBadge');
+        const cardPrice = document.getElementById('swipeCardPrice');
+        const emptyState = document.getElementById('swipeEmpty');
+        const actionsEl = document.querySelector('.swipe-actions');
+        const shopCta = document.getElementById('shopCta');
+        
+        // Check if we have items left
+        if (this.currentIndex >= this.items.length || this.items.length === 0) {
+            if (card) card.style.display = 'none';
+            if (emptyState) emptyState.style.display = 'block';
+            if (actionsEl) actionsEl.style.display = 'none';
+            if (shopCta) shopCta.style.display = 'none';
+            return;
+        }
+        
+        const item = this.items[this.currentIndex];
+        
+        // Show elements
+        if (card) card.style.display = 'block';
+        if (emptyState) emptyState.style.display = 'none';
+        if (actionsEl) actionsEl.style.display = 'flex';
+        
+        // Update card content
+        if (cardImage) cardImage.src = item.image;
+        if (cardName) cardName.textContent = item.name;
+        if (cardDetails) cardDetails.textContent = item.color || item.brand || '';
+        
+        const isShop = this.currentSource === 'shop';
+        
+        // Update badge
+        if (cardBadge) {
+            cardBadge.innerHTML = isShop 
+                ? '<i class="fas fa-shopping-bag"></i> Shop'
+                : '<i class="fas fa-home"></i> Eigen';
+            cardBadge.className = isShop ? 'card-badge shop' : 'card-badge';
+        }
+        
+        // Update price (only for shop items)
+        if (cardPrice) {
+            if (isShop && item.price) {
+                cardPrice.style.display = 'flex';
+                cardPrice.innerHTML = `
+                    <span class="price">€${item.price.toFixed(2)}</span>
+                    ${item.originalPrice ? `<span class="original-price">€${item.originalPrice.toFixed(2)}</span>` : ''}
+                `;
+            } else {
+                cardPrice.style.display = 'none';
+            }
+        }
+        
+        // Show shop CTA for shop items
+        if (shopCta) shopCta.style.display = isShop ? 'block' : 'none';
+        
+        // Update progress
+        const progressEl = document.querySelector('.swipe-progress');
+        if (progressEl) progressEl.textContent = `${this.currentIndex + 1}/${this.items.length}`;
+        
+        // Setup drag events for the card
+        this.setupCardDrag();
+    },
 
-        // Shuffle all button
-        const shuffleBtn = document.getElementById('shuffleAllBtn');
-        if (shuffleBtn) shuffleBtn.addEventListener('click', () => this.shuffleAll());
-
-        // Lookbook item clicks
-        document.querySelectorAll('.lookbook-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                if (e.target.closest('.remove-item')) return;
-                const category = item.dataset.slot;
-                this.selectCategory(category);
+    setupEventListeners() {
+        // Source tabs
+        document.querySelectorAll('.source-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                this.currentSource = tab.dataset.source;
+                this.currentIndex = 0;
+                this.loadItems();
+                this.updateSourceTabs();
+                this.updateHeader();
+                this.renderCurrentCard();
             });
         });
-
-        // Touch gestures
-        this.initTouchGestures();
-
-        // Keyboard navigation
-        document.addEventListener('keydown', (e) => {
-            if (document.getElementById('swipePage').classList.contains('active')) {
-                if (e.key === 'ArrowLeft') this.swipe('left');
-                if (e.key === 'ArrowRight') this.swipe('right');
-                if (e.key === 'ArrowDown') this.skipCategory();
-            }
-        });
+        
+        // Swipe buttons
+        const nopeBtn = document.getElementById('btnSwipeLeft');
+        const likeBtn = document.getElementById('btnSwipeRight');
+        const undoBtn = document.getElementById('btnUndo');
+        
+        if (nopeBtn) {
+            nopeBtn.addEventListener('click', () => this.handleSwipe('left'));
+        }
+        
+        if (likeBtn) {
+            likeBtn.addEventListener('click', () => this.handleSwipe('right'));
+        }
+        
+        if (undoBtn) {
+            undoBtn.addEventListener('click', () => this.handleUndo());
+        }
+        
+        // Back button
+        const backBtn = document.querySelector('.swipe-header .btn-back');
+        if (backBtn) {
+            backBtn.addEventListener('click', () => App.showPage('today'));
+        }
     },
 
-    // Genereer slimme suggestie op basis van weer
-    generateSmartSuggestion() {
-        const allClothing = DataManager.getClothing();
-        const weather = WeatherManager.getClothingRecommendation();
-        const needsOuterwear = WeatherManager.needsOuterwear();
-        
-        // Score items op basis van weer en seizoen
-        const scoreItem = (item) => {
-            let score = Math.random() * 2; // Wat randomness
-            
-            // Weer matching
-            if (weather === 'winter' && (item.season === 'winter' || item.season === 'all')) score += 3;
-            if (weather === 'summer' && (item.season === 'summer' || item.season === 'all')) score += 3;
-            if (weather === 'spring' && (item.season === 'spring' || item.season === 'all')) score += 2;
-            
-            // Favoriet bonus
-            if (item.favorite) score += 1;
-            
-            // Minder gedragen items een kleine boost
-            if (item.wearCount < 5) score += 0.5;
-            
-            return { ...item, score };
-        };
-
-        // Selecteer beste items per categorie
-        const getBestItem = (category) => {
-            const items = allClothing
-                .filter(i => i.category === category)
-                .map(scoreItem)
-                .sort((a, b) => b.score - a.score);
-            return items[0] || null;
-        };
-
-        this.suggestedOutfit = {
-            outerwear: needsOuterwear ? getBestItem('outerwear') : null,
-            tops: getBestItem('tops'),
-            bottoms: getBestItem('bottoms'),
-            shoes: getBestItem('shoes')
-        };
-
-        this.renderSuggestionBanner();
-    },
-
-    renderSuggestionBanner() {
-        const banner = document.getElementById('outfitSuggestionBanner');
-        const preview = document.getElementById('suggestionPreview');
-        const weatherEl = document.getElementById('suggestionWeather');
-        
-        if (!banner || !preview) return;
-
-        // Update weather text
-        const temp = document.getElementById('weatherTemp')?.textContent || '15°C';
-        const desc = document.getElementById('weatherDesc')?.textContent || 'Bewolkt';
-        weatherEl.textContent = `${temp} - ${desc}`;
-
-        // Render preview items
-        const categories = ['outerwear', 'tops', 'bottoms', 'shoes'];
-        const labels = { outerwear: 'Jas', tops: 'Top', bottoms: 'Broek', shoes: 'Schoenen' };
-        
-        let html = '';
-        categories.forEach(cat => {
-            const item = this.suggestedOutfit[cat];
-            if (item) {
-                html += `
-                    <div class="suggestion-item">
-                        <img src="${item.image || this.getPlaceholderImage(item)}" alt="${item.name}" 
-                             onerror="this.src='${this.getPlaceholderImage(item)}'">
-                        <span>${labels[cat]}</span>
-                    </div>
-                `;
-            }
-        });
-        
-        preview.innerHTML = html || '<p style="opacity:0.8;">Voeg eerst kleding toe aan je kast</p>';
-    },
-
-    acceptFullSuggestion() {
-        // Neem hele outfit over
-        Object.keys(this.suggestedOutfit).forEach(category => {
-            const item = this.suggestedOutfit[category];
-            if (item) {
-                this.selectedItems[category] = item;
-                this.updateMannequin(category, item);
-                this.updateCategoryTab(category);
-            }
-        });
-
-        // Verberg banner
-        document.getElementById('outfitSuggestionBanner').classList.add('hidden');
-        
-        WardrobeManager.showNotification('Outfit overgenomen! 🎉');
-    },
-
-    startCustomizing() {
-        // Verberg banner en start met eerste categorie
-        document.getElementById('outfitSuggestionBanner').classList.add('hidden');
-        
-        // Start met tops (of outerwear als het koud is)
-        const needsOuterwear = WeatherManager.needsOuterwear();
-        this.selectCategory(needsOuterwear ? 'outerwear' : 'tops');
-    },
-
-    shuffleAll() {
-        const allClothing = DataManager.getClothing();
-        const categories = ['outerwear', 'tops', 'bottoms', 'shoes'];
-        
-        categories.forEach(category => {
-            const items = allClothing.filter(i => i.category === category);
-            if (items.length > 0) {
-                const randomItem = items[Math.floor(Math.random() * items.length)];
-                this.selectedItems[category] = randomItem;
-                this.updateMannequin(category, randomItem);
-                this.updateCategoryTab(category);
-            }
-        });
-
-        WardrobeManager.showNotification('Nieuwe combinatie! 🎲');
-    },
-
-    resetOutfit() {
-        // Reset all selected items
-        this.selectedItems = {
-            outerwear: null,
-            tops: null,
-            bottoms: null,
-            shoes: null
-        };
-
-        // Icons and labels for each category
-        const categoryInfo = {
-            Outerwear: { icon: 'fa-vest', label: 'Jas' },
-            Tops: { icon: 'fa-tshirt', label: 'Top' },
-            Bottoms: { icon: 'fa-socks', label: 'Broek' },
-            Shoes: { icon: 'fa-shoe-prints', label: 'Schoenen' }
-        };
-
-        // Reset flat-lay items
-        ['Outerwear', 'Tops', 'Bottoms', 'Shoes'].forEach(cat => {
-            const slot = document.getElementById(`mannequin${cat}`);
-            if (slot) {
-                slot.classList.remove('filled', 'active');
-                const info = categoryInfo[cat];
-                slot.innerHTML = `
-                    <div class="item-empty">
-                        <i class="fas ${info.icon}"></i>
-                        <span>${info.label}</span>
-                    </div>
-                `;
-            }
-        });
-
-        // Reset category tabs
-        document.querySelectorAll('.cat-tab').forEach(tab => {
-            tab.classList.remove('active', 'completed');
-        });
-
-        // Show suggestion banner again
-        const banner = document.getElementById('outfitSuggestionBanner');
-        if (banner) banner.classList.remove('hidden');
-        this.generateSmartSuggestion();
-
-        // Hide swipe card
-        document.getElementById('swipeCard').style.display = 'none';
-        document.getElementById('swipeActions').style.display = 'none';
-        document.getElementById('swipeInstructions').style.display = 'block';
-        document.getElementById('swipeInstructions').innerHTML = `
-            <i class="fas fa-hand-pointer"></i>
-            <p>Kies een categorie hierboven om items te wisselen</p>
-        `;
-    },
-
-    initTouchGestures() {
-        const card = document.getElementById('swipeCard');
+    setupCardDrag() {
+        const card = document.getElementById('mainSwipeCard');
         if (!card) return;
+        
+        // Remove existing listeners
+        card.replaceWith(card.cloneNode(true));
+        const newCard = document.getElementById('mainSwipeCard');
+        
+        // Touch events
+        newCard.addEventListener('touchstart', (e) => this.handleDragStart(e), { passive: true });
+        newCard.addEventListener('touchmove', (e) => this.handleDragMove(e), { passive: true });
+        newCard.addEventListener('touchend', (e) => this.handleDragEnd(e));
+        
+        // Mouse events
+        newCard.addEventListener('mousedown', (e) => this.handleDragStart(e));
+    },
 
-        let startX = 0;
-        let startY = 0;
-        let currentX = 0;
-        let isDragging = false;
+    handleDragStart(e) {
+        const card = document.getElementById('mainSwipeCard');
+        if (!card) return;
+        
+        this.isDragging = true;
+        this.startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+        this.startY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+        
+        card.style.transition = 'none';
+    },
 
-        card.addEventListener('touchstart', (e) => {
-            startX = e.touches[0].clientX;
-            startY = e.touches[0].clientY;
-            isDragging = true;
-            card.style.transition = 'none';
-        }, { passive: true });
-
-        card.addEventListener('touchmove', (e) => {
-            if (!isDragging) return;
-            currentX = e.touches[0].clientX;
-            const diff = currentX - startX;
-            const rotation = diff * 0.15;
-            const scale = 1 - Math.abs(diff) * 0.0005;
+    handleDragMove(e) {
+        if (!this.isDragging) return;
+        
+        const card = document.getElementById('mainSwipeCard');
+        if (!card) return;
+        
+        this.currentX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+        const currentY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+        
+        const diffX = this.currentX - this.startX;
+        const diffY = currentY - this.startY;
+        
+        // Only horizontal movement
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+            const rotation = diffX * 0.05;
+            card.style.transform = `translateX(${diffX}px) rotate(${rotation}deg)`;
             
-            card.style.transform = `translateX(${diff}px) rotate(${rotation}deg) scale(${Math.max(0.95, scale)})`;
-            
-            // Show swipe indicators
-            if (diff > 50) {
+            // Show overlays
+            if (diffX > 50) {
                 card.classList.add('swiping-right');
                 card.classList.remove('swiping-left');
-                card.style.boxShadow = '0 10px 40px rgba(16, 185, 129, 0.4)';
-            } else if (diff < -50) {
+            } else if (diffX < -50) {
                 card.classList.add('swiping-left');
                 card.classList.remove('swiping-right');
-                card.style.boxShadow = '0 10px 40px rgba(239, 68, 68, 0.4)';
             } else {
                 card.classList.remove('swiping-left', 'swiping-right');
-                card.style.boxShadow = '';
             }
-        }, { passive: true });
-
-        card.addEventListener('touchend', () => {
-            if (!isDragging) return;
-            isDragging = false;
-            card.style.transition = 'all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
-            
-            const diff = currentX - startX;
-            
-            if (diff > 100) {
-                this.swipe('right');
-            } else if (diff < -100) {
-                this.swipe('left');
-            } else {
-                card.style.transform = '';
-                card.style.boxShadow = '';
-                card.classList.remove('swiping-left', 'swiping-right');
-            }
-        });
-    },
-
-    selectCategory(category) {
-        if (!category) return;
-
-        this.currentCategory = category;
-        this.currentItems = DataManager.getClothingByCategory(category);
-        this.currentIndex = 0;
-
-        // Update tab states
-        document.querySelectorAll('.cat-tab').forEach(tab => {
-            const tabCat = tab.dataset.category;
-            tab.classList.remove('active');
-            
-            if (tabCat === category) {
-                tab.classList.add('active');
-            }
-            
-            // Mark completed categories
-            if (this.selectedItems[tabCat]) {
-                tab.classList.add('completed');
-            }
-        });
-
-        // Highlight lookbook item
-        document.querySelectorAll('.lookbook-item').forEach(item => {
-            item.classList.toggle('active', item.dataset.slot === category);
-        });
-
-        // Show swipe card
-        if (this.currentItems.length > 0) {
-            document.getElementById('swipeInstructions').style.display = 'none';
-            document.getElementById('swipeCard').style.display = 'block';
-            document.getElementById('swipeActions').style.display = 'flex';
-            this.showCurrentItem();
-        } else {
-            this.showEmpty();
         }
     },
 
-    showCurrentItem() {
-        const item = this.currentItems[this.currentIndex];
-        if (!item) {
-            this.showEmpty();
-            return;
-        }
-
-        const card = document.getElementById('swipeCard');
-        const imageEl = document.getElementById('swipeImage');
-        const nameEl = document.getElementById('swipeItemName');
-        const detailsEl = document.getElementById('swipeItemDetails');
-        const counterEl = document.getElementById('cardCounter');
-
-        // Animate card entrance
-        card.style.opacity = '0';
-        card.style.transform = 'scale(0.8) translateY(30px)';
+    handleDragEnd(e) {
+        if (!this.isDragging) return;
+        this.isDragging = false;
         
-        // Set image with fallback
-        if (item.image) {
-            imageEl.src = item.image;
-            imageEl.onerror = () => {
-                imageEl.src = this.getPlaceholderImage(item);
-            };
+        const card = document.getElementById('mainSwipeCard');
+        if (!card) return;
+        
+        const diffX = this.currentX - this.startX;
+        
+        card.style.transition = 'transform 0.3s ease';
+        
+        if (diffX > this.threshold) {
+            // Swipe right - like
+            this.handleSwipe('right');
+        } else if (diffX < -this.threshold) {
+            // Swipe left - nope
+            this.handleSwipe('left');
         } else {
-            imageEl.src = this.getPlaceholderImage(item);
-        }
-
-        nameEl.textContent = item.name;
-        detailsEl.textContent = `${WardrobeManager.getColorLabel(item.color)} • ${this.getStyleLabel(item.style)}`;
-        counterEl.textContent = `${this.currentIndex + 1}/${this.currentItems.length}`;
-
-        // Animate in
-        requestAnimationFrame(() => {
-            card.style.transition = 'all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
-            card.style.opacity = '1';
-            card.style.transform = 'scale(1) translateY(0)';
-            card.style.boxShadow = '';
+            // Reset position
+            card.style.transform = '';
             card.classList.remove('swiping-left', 'swiping-right');
-        });
+        }
     },
 
-    getPlaceholderImage(item) {
-        // Generate SVG placeholder with item info
-        const colorMap = {
-            white: '%23f5f5f5',
-            black: '%232d3436',
-            gray: '%23636e72',
-            blue: '%230984e3',
-            red: '%23d63031',
-            green: '%2300b894',
-            yellow: '%23fdcb6e',
-            orange: '%23e17055',
-            pink: '%23fd79a8',
-            purple: '%236c5ce7',
-            brown: '%238b4513',
-            beige: '%23d4a574'
-        };
-        const bgColor = colorMap[item.color] || '%23dfe6e9';
-        const textColor = ['white', 'yellow', 'beige'].includes(item.color) ? '%23333' : '%23fff';
+    handleSwipe(direction) {
+        const card = document.getElementById('mainSwipeCard');
+        if (!card) return;
         
-        // Create SVG placeholder
-        const svg = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="300" height="350" viewBox="0 0 300 350">
-                <rect fill="${bgColor}" width="300" height="350"/>
-                <text fill="${textColor}" font-family="Arial,sans-serif" font-size="14" text-anchor="middle" x="150" y="170">${item.name}</text>
-                <text fill="${textColor}" font-family="Arial,sans-serif" font-size="12" text-anchor="middle" x="150" y="195" opacity="0.7">${item.brand || ''}</text>
-            </svg>
-        `;
-        return `data:image/svg+xml,${encodeURIComponent(svg.trim())}`;
-    },
-
-    showEmpty() {
-        document.getElementById('swipeCard').style.display = 'none';
-        document.getElementById('swipeActions').style.display = 'none';
+        const item = this.items[this.currentIndex];
         
-        const instructions = document.getElementById('swipeInstructions');
-        instructions.style.display = 'block';
-        instructions.innerHTML = `
-            <i class="fas fa-box-open"></i>
-            <p>Geen items in deze categorie.<br>Voeg eerst kleding toe!</p>
-        `;
-    },
-
-    swipe(direction) {
-        if (!this.currentCategory || this.currentItems.length === 0) return;
-
-        const card = document.getElementById('swipeCard');
-        card.classList.add(direction === 'right' ? 'swiping-right' : 'swiping-left');
-
-        setTimeout(() => {
-            if (direction === 'right') {
-                // Like - add to outfit
-                const item = this.currentItems[this.currentIndex];
-                this.addToOutfit(item);
-                
-                // Auto-advance to next category
-                this.autoAdvanceCategory();
-            } else {
-                // Dislike - go to next item
-                this.currentIndex++;
-                if (this.currentIndex >= this.currentItems.length) {
-                    this.currentIndex = 0; // Loop back
+        if (direction === 'right') {
+            // Animate card out to right
+            card.classList.add('animating-right');
+            
+            setTimeout(() => {
+                // Select this item for today's outfit
+                if (TodayManager && item) {
+                    TodayManager.updateSlot(this.currentCategory, item);
                 }
                 
-                card.classList.remove('swiping-right', 'swiping-left');
-                this.showCurrentItem();
-            }
-        }, 300);
-    },
-
-    skipCategory() {
-        this.autoAdvanceCategory();
-    },
-
-    autoAdvanceCategory() {
-        const categories = ['outerwear', 'tops', 'bottoms', 'shoes'];
-        const currentIdx = categories.indexOf(this.currentCategory);
-        
-        // Find next unfilled category
-        for (let i = 1; i <= categories.length; i++) {
-            const nextIdx = (currentIdx + i) % categories.length;
-            const nextCat = categories[nextIdx];
+                // Reset card and go back to today page
+                card.classList.remove('animating-right');
+                card.style.transform = '';
+                App.showPage('today');
+            }, 400);
+        } else {
+            // Animate card out to left
+            card.classList.add('animating-left');
             
-            if (!this.selectedItems[nextCat]) {
-                this.selectCategory(nextCat);
-                return;
-            }
-        }
-        
-        // All filled - show completion message
-        WardrobeManager.showNotification('Outfit compleet! 🎉');
-        document.getElementById('swipeCard').style.display = 'none';
-        document.getElementById('swipeActions').style.display = 'none';
-        document.getElementById('swipeInstructions').style.display = 'block';
-        document.getElementById('swipeInstructions').innerHTML = `
-            <i class="fas fa-check-circle" style="color: var(--success-color);"></i>
-            <p>Je outfit is compleet!<br>Klik op "Outfit Opslaan" of klik op een item om te wijzigen.</p>
-        `;
-    },
-
-    addToOutfit(item) {
-        this.selectedItems[this.currentCategory] = item;
-        this.updateMannequin(this.currentCategory, item);
-        this.updateCategoryTab(this.currentCategory);
-        
-        WardrobeManager.showNotification(`${item.name} toegevoegd! ✓`);
-    },
-
-    updateMannequin(category, item) {
-        const slot = document.getElementById(`mannequin${this.capitalize(category)}`);
-        if (!slot) return;
-
-        slot.classList.add('filled');
-        
-        let imgSrc = item.image || this.getPlaceholderImage(item);
-        
-        slot.innerHTML = `
-            <img src="${imgSrc}" alt="${item.name}" onerror="this.src='${this.getPlaceholderImage(item).replace(/'/g, "\\'")}'">
-            <div class="item-label">${item.name}</div>
-            <button class="remove-item" onclick="SwipeManager.removeFromOutfit('${category}')">
-                <i class="fas fa-times"></i>
-            </button>
-        `;
-    },
-
-    removeFromOutfit(category) {
-        this.selectedItems[category] = null;
-        
-        // Icons and labels for each category
-        const categoryInfo = {
-            outerwear: { icon: 'fa-vest', label: 'Jas' },
-            tops: { icon: 'fa-tshirt', label: 'Top' },
-            bottoms: { icon: 'fa-socks', label: 'Broek' },
-            shoes: { icon: 'fa-shoe-prints', label: 'Schoenen' }
-        };
-        
-        const slot = document.getElementById(`mannequin${this.capitalize(category)}`);
-        if (slot) {
-            slot.classList.remove('filled', 'active');
-            const info = categoryInfo[category];
-            slot.innerHTML = `
-                <div class="item-empty">
-                    <i class="fas ${info.icon}"></i>
-                    <span>${info.label}</span>
-                </div>
-            `;
-        }
-
-        // Update tab
-        const tab = document.querySelector(`.cat-tab[data-category="${category}"]`);
-        if (tab) tab.classList.remove('completed');
-
-        WardrobeManager.showNotification('Item verwijderd');
-    },
-
-    updateCategoryTab(category) {
-        const tab = document.querySelector(`.cat-tab[data-category="${category}"]`);
-        if (tab) {
-            tab.classList.remove('active');
-            tab.classList.add('completed');
+            setTimeout(() => {
+                // Reset card
+                card.classList.remove('animating-left');
+                card.style.transform = '';
+                
+                // Move to next item
+                this.currentIndex++;
+                this.renderCurrentCard();
+            }, 300);
         }
     },
 
-    saveOutfit() {
-        // Check if at least 2 items selected
-        const filledCount = Object.values(this.selectedItems).filter(item => item !== null).length;
-        
-        if (filledCount < 2) {
-            WardrobeManager.showNotification('Selecteer minimaal 2 items! 👕👖');
-            return;
+    handleUndo() {
+        if (this.currentIndex > 0) {
+            this.currentIndex--;
+            this.renderCurrentCard();
         }
-
-        // Prompt for name
-        const name = prompt('Geef je outfit een naam:', 'Mijn Outfit');
-        if (!name) return;
-
-        // Create outfit with item IDs
-        const items = {};
-        for (const [category, item] of Object.entries(this.selectedItems)) {
-            items[category] = item ? item.id : null;
-        }
-
-        OutfitsManager.saveOutfit(name, items);
-        WardrobeManager.showNotification(`"${name}" opgeslagen! 🎉`);
-        
-        // Reset for new outfit
-        this.resetOutfit();
-    },
-
-    capitalize(str) {
-        return str.charAt(0).toUpperCase() + str.slice(1);
-    },
-
-    getStyleLabel(style) {
-        const labels = {
-            casual: 'Casual',
-            formal: 'Formeel',
-            sport: 'Sport',
-            elegant: 'Elegant'
-        };
-        return labels[style] || style;
     }
 };
 
-// Initialiseer bij laden
+// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     SwipeManager.init();
 });
+
+// Export
+window.SwipeManager = SwipeManager;

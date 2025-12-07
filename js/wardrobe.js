@@ -1,424 +1,391 @@
-// Kledingkast functionaliteit
+/**
+ * StyleMate - Wardrobe Manager
+ * Handles clothing management and photo capture
+ */
 
 const WardrobeManager = {
     currentFilter: 'all',
+    selectedPhoto: null,
+    selectedCategory: null,
+    selectedColor: null,
+    selectedSeason: 'all',
+    selectedTags: [],
+    selectedPrice: null,
+    removeBackground: false,
 
     init() {
-        this.bindEvents();
-        this.renderClothing();
+        console.log('👕 WardrobeManager initialiseren...');
+        this.setupEventListeners();
+        this.loadWardrobe();
+        this.updateStats();
     },
 
-    bindEvents() {
-        // Add clothing button
-        const addBtn = document.getElementById('addClothingBtn');
+    setupEventListeners() {
+        // Add clothes button
+        const addBtn = document.querySelector('.btn-add-clothes');
         if (addBtn) {
-            addBtn.addEventListener('click', () => this.openAddModal());
+            addBtn.addEventListener('click', () => App.showAddClothingModal());
         }
-
-        // Close modal
-        const closeBtn = document.getElementById('closeModal');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => this.closeAddModal());
-        }
-
-        // Form submit
-        const form = document.getElementById('addClothingForm');
-        if (form) {
-            form.addEventListener('submit', (e) => this.handleAddClothing(e));
-        }
-
-        // Category filters
-        const filterBtns = document.querySelectorAll('.filter-btn');
-        filterBtns.forEach(btn => {
-            btn.addEventListener('click', () => this.filterByCategory(btn.dataset.category));
+        
+        // Category tabs
+        document.querySelectorAll('.cat-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                this.currentFilter = tab.dataset.category;
+                document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                this.loadWardrobe();
+            });
         });
-
-        // Image upload preview (gallery)
-        const imageInput = document.getElementById('clothingImage');
-        if (imageInput) {
-            imageInput.addEventListener('change', (e) => this.previewImage(e));
+        
+        // Modal close buttons
+        document.querySelectorAll('.btn-close-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const modal = btn.closest('.modal');
+                if (modal) modal.classList.remove('active');
+                this.resetForm();
+            });
+        });
+        
+        // Photo buttons
+        const cameraBtn = document.querySelector('.photo-btn.primary');
+        const galleryBtn = document.querySelector('.photo-btn:not(.primary)');
+        
+        if (cameraBtn) {
+            cameraBtn.addEventListener('click', () => this.openCamera());
         }
-
-        // Camera input preview
-        const cameraInput = document.getElementById('clothingCamera');
-        if (cameraInput) {
-            cameraInput.addEventListener('change', (e) => this.previewImage(e));
+        
+        if (galleryBtn) {
+            galleryBtn.addEventListener('click', () => this.openGallery());
         }
-
-        // URL input preview
-        const urlInput = document.getElementById('clothingImageUrl');
-        if (urlInput) {
-            urlInput.addEventListener('blur', (e) => this.previewUrlImage(e));
-        }
-
-        // Close modal on outside click
-        const modal = document.getElementById('addClothingModal');
-        if (modal) {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    this.closeAddModal();
+        
+        // Category options
+        document.querySelectorAll('.cat-option').forEach(option => {
+            option.addEventListener('click', () => {
+                document.querySelectorAll('.cat-option').forEach(o => o.classList.remove('active'));
+                option.classList.add('active');
+                this.selectedCategory = option.dataset.value || option.dataset.category;
+                
+                // Show details form after selecting category
+                const detailsForm = document.getElementById('detailsForm');
+                if (detailsForm && this.selectedPhoto) {
+                    detailsForm.style.display = 'block';
                 }
             });
+        });
+        
+        // Color dots
+        document.querySelectorAll('.color-dot').forEach(dot => {
+            dot.addEventListener('click', () => {
+                document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+                dot.classList.add('active');
+                this.selectedColor = dot.dataset.color;
+            });
+        });
+        
+        // Season buttons
+        document.querySelectorAll('.season-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.season-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.selectedSeason = btn.dataset.value || btn.dataset.season || 'all';
+            });
+        });
+        
+        // Tag buttons
+        document.querySelectorAll('.tag-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                btn.classList.toggle('active');
+                const tag = btn.dataset.tag;
+                if (this.selectedTags.includes(tag)) {
+                    this.selectedTags = this.selectedTags.filter(t => t !== tag);
+                } else {
+                    this.selectedTags.push(tag);
+                }
+            });
+        });
+        
+        // Remove background toggle
+        const bgToggle = document.getElementById('removeBackgroundToggle');
+        if (bgToggle) {
+            bgToggle.addEventListener('change', (e) => {
+                this.removeBackground = e.target.checked;
+            });
         }
+        
+        // Detect color button
+        const detectBtn = document.getElementById('detectColorBtn');
+        if (detectBtn) {
+            detectBtn.addEventListener('click', () => this.detectColor());
+        }
+        
+        // Save button
+        const saveBtn = document.querySelector('.btn-save');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => this.saveClothing());
+        }
+        
+        // Modal backdrop click
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('active');
+                    this.resetForm();
+                }
+            });
+        });
     },
 
-    renderClothing() {
-        const grid = document.getElementById('clothingGrid');
+    loadWardrobe() {
+        const grid = document.querySelector('.clothing-grid');
         if (!grid) return;
-
-        const items = DataManager.getClothingByCategory(this.currentFilter);
-
+        
+        const items = DataManager.getItemsByCategory(this.currentFilter);
+        
         if (items.length === 0) {
             grid.innerHTML = `
-                <div class="empty-state" style="grid-column: 1/-1;">
-                    <i class="fas fa-tshirt"></i>
-                    <h3>Je kast is nog leeg</h3>
-                    <p>Voeg je eerste kledingstuk toe!</p>
+                <div class="empty-wardrobe" style="grid-column: 1 / -1;">
+                    <div class="empty-illustration">
+                        <i class="fas fa-shirt"></i>
+                    </div>
+                    <h3>Nog geen kleding</h3>
+                    <p>Begin met het toevoegen van je eerste kledingstuk</p>
+                    <button onclick="App.showAddClothingModal()" class="btn-primary">
+                        <i class="fas fa-plus"></i> Toevoegen
+                    </button>
                 </div>
             `;
             return;
         }
-
-        grid.innerHTML = items.map(item => this.createClothingCard(item)).join('');
-
-        // Bind delete events
-        grid.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.deleteClothing(btn.dataset.id);
-            });
-        });
-    },
-
-    createClothingCard(item) {
-        const placeholderSvg = this.getPlaceholderSvg(item);
-        const imageContent = item.image 
-            ? `<img src="${item.image}" alt="${item.name}" onerror="this.src='${placeholderSvg}'">`
-            : `<img src="${placeholderSvg}" alt="${item.name}">`;
-
-        const colorLabel = this.getColorLabel(item.color);
-        const favoriteIcon = item.favorite ? '<span class="favorite-badge"><i class="fas fa-heart"></i></span>' : '';
-        const wearCount = item.wearCount || 0;
-        const wearBadge = wearCount > 0 ? `<span class="wear-badge">${wearCount}x</span>` : '';
-
-        return `
-            <div class="clothing-item" data-id="${item.id}">
-                ${favoriteIcon}
-                ${wearBadge}
-                ${imageContent}
-                <div class="clothing-item-info">
+        
+        grid.innerHTML = items.map(item => `
+            <div class="clothing-card" data-id="${item.id}" onclick="WardrobeManager.showItemDetail('${item.id}')">
+                <img src="${item.image}" alt="${item.name}">
+                <div class="clothing-card-info">
                     <h4>${item.name}</h4>
-                    <span>${colorLabel} • ${this.getCategoryLabel(item.category)}</span>
+                    <span>${item.color || ''}</span>
                 </div>
-                <button class="delete-btn" data-id="${item.id}">
-                    <i class="fas fa-trash"></i>
-                </button>
             </div>
-        `;
+        `).join('');
     },
 
-    getPlaceholderSvg(item) {
-        const colorMap = {
-            white: '%23f5f5f5',
-            black: '%232d3436',
-            gray: '%23636e72',
-            blue: '%230984e3',
-            red: '%23d63031',
-            green: '%2300b894',
-            yellow: '%23fdcb6e',
-            orange: '%23e17055',
-            pink: '%23fd79a8',
-            purple: '%236c5ce7',
-            brown: '%238b4513',
-            beige: '%23d4a574'
-        };
-        const bgColor = colorMap[item.color] || '%23dfe6e9';
-        const textColor = ['white', 'yellow', 'beige'].includes(item.color) ? '%23333' : '%23fff';
+    updateStats() {
+        const stats = DataManager.getStats();
         
-        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="150" height="180" viewBox="0 0 150 180"><rect fill="${bgColor}" width="150" height="180"/><text fill="${textColor}" font-family="Arial" font-size="11" text-anchor="middle" x="75" y="90">${encodeURIComponent(item.name)}</text></svg>`;
-        return `data:image/svg+xml,${svg}`;
-    },
-
-    filterByCategory(category) {
-        this.currentFilter = category;
+        const totalEl = document.getElementById('totalItems');
+        const outfitsEl = document.getElementById('totalOutfits');
+        const favoritesEl = document.getElementById('favoriteCount');
         
-        // Update active button
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.category === category);
-        });
-
-        this.renderClothing();
+        if (totalEl) totalEl.textContent = stats.total;
+        if (outfitsEl) outfitsEl.textContent = stats.outfits;
+        if (favoritesEl) favoritesEl.textContent = DataManager.getFavorites().length;
     },
 
-    openAddModal() {
-        const modal = document.getElementById('addClothingModal');
-        if (modal) {
-            modal.classList.add('active');
-        }
-    },
-
-    closeAddModal() {
-        const modal = document.getElementById('addClothingModal');
-        if (modal) {
-            modal.classList.remove('active');
-            // Reset form
-            document.getElementById('addClothingForm')?.reset();
-            
-            // Reset preview
-            const preview = document.getElementById('imagePreview');
-            const container = document.getElementById('imagePreviewContainer');
-            const placeholder = document.getElementById('previewPlaceholder');
-            
-            if (preview) preview.innerHTML = '';
-            if (container) container.classList.remove('has-image');
-            if (placeholder) placeholder.style.display = 'flex';
-        }
-    },
-
-    handleAddClothing(e) {
-        e.preventDefault();
-
-        const name = document.getElementById('clothingName').value;
-        const category = document.getElementById('clothingCategory').value;
-        const color = document.getElementById('clothingColor').value;
-        const style = document.getElementById('clothingStyle').value;
-        const season = document.getElementById('clothingSeason').value;
+    openCamera() {
+        // Create hidden file input for camera
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.capture = 'environment';
         
-        // Get image from file or URL
-        const imagePreview = document.getElementById('imagePreview');
-        const img = imagePreview.querySelector('img');
-        const image = img ? img.src : null;
-
-        const newItem = {
-            name,
-            category,
-            color,
-            style,
-            season,
-            image,
-            icon: this.getCategoryIcon(category)
-        };
-
-        DataManager.addClothingItem(newItem);
-        this.closeAddModal();
-        this.renderClothing();
-
-        // Show success message with animation
-        this.showSuccessAnimation();
-        this.showNotification(`${name} toegevoegd aan je kast! 🎉`);
+        input.onchange = (e) => this.handleFileSelect(e);
+        input.click();
     },
 
-    showSuccessAnimation() {
-        // Trigger confetti effect
-        const container = document.createElement('div');
-        container.className = 'confetti-container';
-        container.innerHTML = Array(20).fill('').map(() => 
-            `<div class="confetti-piece" style="
-                left: ${Math.random() * 100}%;
-                animation-delay: ${Math.random() * 0.3}s;
-                background: ${['#6366f1', '#f472b6', '#10b981', '#f59e0b', '#06b6d4'][Math.floor(Math.random() * 5)]};
-            "></div>`
-        ).join('');
-        document.body.appendChild(container);
-        setTimeout(() => container.remove(), 2000);
+    openGallery() {
+        // Create hidden file input for gallery
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        
+        input.onchange = (e) => this.handleFileSelect(e);
+        input.click();
     },
 
-    deleteClothing(id) {
-        if (confirm('Weet je zeker dat je dit item wilt verwijderen?')) {
-            DataManager.deleteClothingItem(id);
-            this.renderClothing();
-            this.showNotification('Item verwijderd');
-        }
-    },
-
-    previewImage(e) {
+    handleFileSelect(e) {
         const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const preview = document.getElementById('imagePreview');
-                const container = document.getElementById('imagePreviewContainer');
-                const placeholder = document.getElementById('previewPlaceholder');
-                
-                if (placeholder) placeholder.style.display = 'none';
-                if (container) container.classList.add('has-image');
-                
-                preview.innerHTML = `
-                    <img src="${event.target.result}" alt="Preview">
-                    <button type="button" class="remove-preview-btn" onclick="WardrobeManager.removePreview()">
-                        <i class="fas fa-times"></i>
-                    </button>
-                `;
-                
-                // Success feedback
-                this.showNotification('Foto toegevoegd! 📸');
-            };
-            reader.readAsDataURL(file);
-        }
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            this.selectedPhoto = event.target.result;
+            this.updatePhotoPreview();
+        };
+        reader.readAsDataURL(file);
     },
 
-    removePreview() {
-        const preview = document.getElementById('imagePreview');
-        const container = document.getElementById('imagePreviewContainer');
-        const placeholder = document.getElementById('previewPlaceholder');
+    updatePhotoPreview() {
+        const preview = document.querySelector('.photo-preview');
+        const detailsForm = document.getElementById('detailsForm');
         
-        preview.innerHTML = '';
-        if (container) container.classList.remove('has-image');
-        if (placeholder) placeholder.style.display = 'flex';
+        if (!preview) return;
         
-        // Reset file inputs
-        const cameraInput = document.getElementById('clothingCamera');
-        const galleryInput = document.getElementById('clothingImage');
-        if (cameraInput) cameraInput.value = '';
-        if (galleryInput) galleryInput.value = '';
-    },
-
-    previewUrlImage(e) {
-        const url = e.target.value;
-        if (url) {
-            const preview = document.getElementById('imagePreview');
-            const container = document.getElementById('imagePreviewContainer');
-            const placeholder = document.getElementById('previewPlaceholder');
-            const img = new Image();
+        if (this.selectedPhoto) {
+            preview.innerHTML = `<img src="${this.selectedPhoto}" alt="Preview">`;
             
-            img.onload = () => {
-                if (placeholder) placeholder.style.display = 'none';
-                if (container) container.classList.add('has-image');
-                
-                preview.innerHTML = `
-                    <img src="${url}" alt="Preview">
-                    <button type="button" class="remove-preview-btn" onclick="WardrobeManager.removePreview()">
-                        <i class="fas fa-times"></i>
-                    </button>
-                `;
-                this.showNotification('Afbeelding geladen! 🖼️');
-            };
-            img.onerror = () => {
-                preview.innerHTML = '<p style="color: #e17055; padding: 10px;">Kon afbeelding niet laden</p>';
-            };
-            img.src = url;
+            // Show details form
+            if (detailsForm) {
+                detailsForm.style.display = 'block';
+            }
+            
+            // Enable save button if category is also selected
+            const saveBtn = document.querySelector('.btn-save');
+            if (saveBtn && this.selectedCategory) {
+                saveBtn.disabled = false;
+            }
+        } else {
+            preview.innerHTML = `
+                <div class="photo-placeholder">
+                    <i class="fas fa-camera"></i>
+                    <span>Maak een foto of kies uit galerij</span>
+                </div>
+            `;
+            
+            // Hide details form
+            if (detailsForm) {
+                detailsForm.style.display = 'none';
+            }
         }
     },
 
-    getCategoryIcon(category) {
-        const icons = {
-            tops: 'fa-tshirt',
-            bottoms: 'fa-socks',
-            shoes: 'fa-shoe-prints',
-            accessories: 'fa-ring',
-            outerwear: 'fa-vest'
+    saveClothing() {
+        if (!this.selectedPhoto) {
+            alert('Maak eerst een foto van je kledingstuk');
+            return;
+        }
+        
+        if (!this.selectedCategory) {
+            alert('Selecteer een categorie');
+            return;
+        }
+        
+        const nameInput = document.querySelector('.details-form input[type="text"]');
+        const name = nameInput?.value || this.generateName();
+        
+        // Get tags from input
+        const tagsInput = document.getElementById('itemTags');
+        const tagsValue = tagsInput?.value || '';
+        const tags = tagsValue.split(',').map(t => t.trim()).filter(t => t.length > 0);
+        
+        // Get price from input
+        const priceInput = document.getElementById('itemPrice');
+        const price = priceInput?.value ? parseFloat(priceInput.value) : null;
+        
+        const item = {
+            name: name,
+            image: this.selectedPhoto,
+            category: this.selectedCategory,
+            color: this.selectedColor,
+            season: this.selectedSeason,
+            tags: tags,
+            price: price,
+            wearCount: 0,
+            lastWorn: null,
+            dateAdded: new Date().toISOString()
         };
-        return icons[category] || 'fa-tshirt';
+        
+        // Save to data
+        const savedItem = DataManager.addClothingItem(item);
+        
+        // Close modal
+        const modal = document.getElementById('addClothingModal');
+        if (modal) modal.classList.remove('active');
+        
+        // Show success
+        App.showSuccess('Toegevoegd! 👕', 'Je kledingstuk is opgeslagen');
+        
+        // Refresh wardrobe
+        this.resetForm();
+        this.loadWardrobe();
+        this.updateStats();
     },
 
-    getCategoryLabel(category) {
-        const labels = {
-            tops: 'Top',
-            bottoms: 'Broek',
+    generateName() {
+        const categoryNames = {
+            outerwear: 'Jas',
+            tops: 'Bovenstuk',
+            bottoms: 'Onderstuk',
             shoes: 'Schoenen',
-            accessories: 'Accessoire',
-            outerwear: 'Jas'
+            accessories: 'Accessoire'
         };
-        return labels[category] || category;
-    },
-
-    getColorLabel(color) {
-        const labels = {
-            white: 'Wit',
-            black: 'Zwart',
-            gray: 'Grijs',
-            blue: 'Blauw',
-            red: 'Rood',
-            green: 'Groen',
-            yellow: 'Geel',
-            orange: 'Oranje',
+        
+        const colorNames = {
+            white: 'Witte',
+            black: 'Zwarte',
+            gray: 'Grijze',
+            navy: 'Navy',
+            blue: 'Blauwe',
+            green: 'Groene',
+            red: 'Rode',
             pink: 'Roze',
-            purple: 'Paars',
-            brown: 'Bruin',
+            yellow: 'Gele',
+            orange: 'Oranje',
+            purple: 'Paarse',
+            brown: 'Bruine',
             beige: 'Beige'
         };
-        return labels[color] || color;
+        
+        const color = this.selectedColor ? colorNames[this.selectedColor] || '' : '';
+        const category = categoryNames[this.selectedCategory] || 'Kledingstuk';
+        
+        return `${color} ${category}`.trim();
     },
 
-    showNotification(message) {
-        // Remove existing notification
-        const existing = document.querySelector('.toast-notification');
-        if (existing) existing.remove();
+    resetForm() {
+        this.selectedPhoto = null;
+        this.selectedCategory = null;
+        this.selectedColor = null;
+        this.selectedSeason = 'all';
+        this.selectedTags = [];
+        this.selectedPrice = null;
+        
+        // Reset UI
+        const nameInput = document.querySelector('.details-form input[type="text"]');
+        if (nameInput) nameInput.value = '';
+        
+        // Reset tags and price inputs
+        const tagsInput = document.getElementById('itemTags');
+        if (tagsInput) tagsInput.value = '';
+        
+        const priceInput = document.getElementById('itemPrice');
+        if (priceInput) priceInput.value = '';
+        
+        document.querySelectorAll('.cat-option').forEach(o => o.classList.remove('active'));
+        document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+        document.querySelectorAll('.season-btn').forEach(b => b.classList.remove('active'));
+        
+        // Select 'all seasons' by default
+        const allSeasonsBtn = document.querySelector('.season-btn[data-season="all"]');
+        if (allSeasonsBtn) allSeasonsBtn.classList.add('active');
+        
+        // Reset photo preview
+        this.updatePhotoPreview();
+        
+        // Disable save button
+        const saveBtn = document.querySelector('.btn-save');
+        if (saveBtn) saveBtn.disabled = true;
+    },
 
-        // Create beautiful notification
-        const notification = document.createElement('div');
-        notification.className = 'toast-notification';
-        notification.innerHTML = `
-            <div class="toast-content">
-                <span class="toast-icon">✨</span>
-                <span class="toast-message">${message}</span>
-            </div>
-        `;
-        notification.style.cssText = `
-            position: fixed;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%) translateY(100px);
-            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-            color: white;
-            padding: 14px 28px;
-            border-radius: 50px;
-            z-index: 1000;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            font-weight: 500;
-            font-size: 0.9rem;
-            opacity: 0;
-            animation: toastIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
-        `;
-
-        // Add animation keyframes if not exists
-        if (!document.querySelector('#toast-styles')) {
-            const style = document.createElement('style');
-            style.id = 'toast-styles';
-            style.textContent = `
-                @keyframes toastIn {
-                    0% {
-                        opacity: 0;
-                        transform: translateX(-50%) translateY(100px) scale(0.8);
-                    }
-                    100% {
-                        opacity: 1;
-                        transform: translateX(-50%) translateY(0) scale(1);
-                    }
-                }
-                @keyframes toastOut {
-                    0% {
-                        opacity: 1;
-                        transform: translateX(-50%) translateY(0) scale(1);
-                    }
-                    100% {
-                        opacity: 0;
-                        transform: translateX(-50%) translateY(-20px) scale(0.8);
-                    }
-                }
-                .toast-content {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                }
-                .toast-icon {
-                    font-size: 1.1rem;
-                }
-            `;
-            document.head.appendChild(style);
+    showItemDetail(itemId) {
+        const item = DataManager.getWardrobe().find(i => i.id === itemId);
+        if (!item) return;
+        
+        // Could show a detail modal or edit screen
+        console.log('Item detail:', item);
+        
+        // For now, confirm delete
+        if (confirm(`Wil je "${item.name}" verwijderen?`)) {
+            DataManager.removeClothingItem(itemId);
+            this.loadWardrobe();
+            this.updateStats();
+            App.showSuccess('Verwijderd', 'Kledingstuk is verwijderd');
         }
+    },
 
-        document.body.appendChild(notification);
-
-        setTimeout(() => {
-            notification.style.animation = 'toastOut 0.3s ease forwards';
-            setTimeout(() => notification.remove(), 300);
-        }, 2500);
+    refresh() {
+        this.loadWardrobe();
+        this.updateStats();
     }
 };
 
-// Initialiseer bij laden
-document.addEventListener('DOMContentLoaded', () => {
-    WardrobeManager.init();
-});
+// Export
+window.WardrobeManager = WardrobeManager;
