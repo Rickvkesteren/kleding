@@ -221,16 +221,75 @@ const WardrobeManager = {
         input.click();
     },
 
-    handleFileSelect(e) {
+    async handleFileSelect(e) {
         const file = e.target.files[0];
         if (!file) return;
         
+        // Show loading state
+        const preview = document.querySelector('.photo-preview');
+        if (preview) {
+            preview.innerHTML = `
+                <div class="photo-loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Foto verwerken...</span>
+                </div>
+            `;
+        }
+        
         const reader = new FileReader();
-        reader.onload = (event) => {
-            this.selectedPhoto = event.target.result;
+        reader.onload = async (event) => {
+            const originalImage = event.target.result;
+            
+            // Process image with PhotoProcessor if available
+            if (typeof PhotoProcessor !== 'undefined') {
+                try {
+                    const processed = await PhotoProcessor.processImage(originalImage, {
+                        removeBackground: this.removeBackground,
+                        detectColor: true,
+                        smartCrop: true
+                    });
+                    
+                    this.selectedPhoto = processed.image;
+                    
+                    // Auto-select detected color
+                    if (processed.colorName) {
+                        this.selectedColor = processed.colorName;
+                        this.highlightDetectedColor(processed.colorName);
+                    }
+                    
+                    // Show success message if background was removed
+                    if (processed.processed && this.removeBackground) {
+                        this.showToast('✨ Achtergrond verwijderd');
+                    }
+                } catch (error) {
+                    console.error('Photo processing failed:', error);
+                    this.selectedPhoto = originalImage;
+                }
+            } else {
+                this.selectedPhoto = originalImage;
+            }
+            
             this.updatePhotoPreview();
         };
         reader.readAsDataURL(file);
+    },
+    
+    highlightDetectedColor(colorName) {
+        // Highlight the detected color in the color picker
+        document.querySelectorAll('.color-dot, .color-chip').forEach(dot => {
+            const dotColor = dot.dataset.color;
+            if (dotColor === colorName) {
+                dot.classList.add('active');
+                if (dot.classList.contains('color-chip')) {
+                    dot.innerHTML = '<i class="fas fa-check"></i>';
+                }
+            } else {
+                dot.classList.remove('active');
+                if (dot.classList.contains('color-chip')) {
+                    dot.innerHTML = '';
+                }
+            }
+        });
     },
 
     updatePhotoPreview() {

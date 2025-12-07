@@ -189,6 +189,46 @@ const TodayManager = {
             return;
         }
         
+        // Use SmartSuggester if available
+        if (typeof SmartSuggester !== 'undefined') {
+            const smartOutfit = SmartSuggester.generateOutfit(wardrobe, {
+                weather: this.weather,
+                dayType: this.dayType,
+                avoidRecentDays: 3
+            });
+            
+            this.currentOutfit = {
+                outerwear: smartOutfit.outerwear,
+                top: smartOutfit.top,
+                bottom: smartOutfit.bottom,
+                shoes: smartOutfit.shoes
+            };
+            
+            // Show tips if available
+            if (smartOutfit.tips && smartOutfit.tips.length > 0) {
+                this.showOutfitTips(smartOutfit.tips);
+            }
+            
+            // Show outfit score
+            if (smartOutfit.score) {
+                this.showOutfitScore(smartOutfit.score);
+            }
+        } else {
+            // Fallback to basic generation
+            this.generateBasicOutfit(wardrobe);
+        }
+        
+        // Save today's outfit
+        DataManager.saveTodayOutfit(this.currentOutfit);
+        
+        // Update UI
+        this.updateOutfitUI();
+        
+        // Check for missing items
+        this.checkMissingItems();
+    },
+    
+    generateBasicOutfit(wardrobe) {
         // Get weather-appropriate recommendations
         const recommendations = WeatherManager.getRecommendation(this.weather);
         
@@ -232,15 +272,33 @@ const TodayManager = {
             bottom: this.getRandomItem(filterByDayType(categories.bottoms)),
             shoes: this.getRandomItem(filterByDayType(categories.shoes))
         };
+    },
+    
+    showOutfitTips(tips) {
+        // Remove existing tips
+        const existingTips = document.querySelector('.outfit-tips');
+        if (existingTips) existingTips.remove();
         
-        // Save today's outfit
-        DataManager.saveTodayOutfit(this.currentOutfit);
+        if (tips.length === 0) return;
         
-        // Update UI
-        this.updateOutfitUI();
+        const tipsHtml = `
+            <div class="outfit-tips">
+                ${tips.map(tip => `<div class="outfit-tip">${tip}</div>`).join('')}
+            </div>
+        `;
         
-        // Check for missing items
-        this.checkMissingItems();
+        const outfitSection = document.querySelector('.outfit-display');
+        if (outfitSection) {
+            outfitSection.insertAdjacentHTML('afterend', tipsHtml);
+        }
+    },
+    
+    showOutfitScore(score) {
+        const scoreEl = document.querySelector('.outfit-score');
+        if (scoreEl) {
+            scoreEl.textContent = `Match: ${score}%`;
+            scoreEl.className = `outfit-score ${score >= 80 ? 'high' : score >= 60 ? 'medium' : 'low'}`;
+        }
     },
 
     getRandomItem(items) {
