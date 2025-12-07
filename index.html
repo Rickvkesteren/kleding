@@ -430,33 +430,67 @@
                     </select>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group photo-section">
                     <label>Afbeelding</label>
-                    <div class="photo-tips">
-                        <i class="fas fa-lightbulb"></i>
-                        <span>Tip: Maak een foto terwijl je het draagt, of leg het plat neer op een neutrale achtergrond!</span>
+                    
+                    <!-- Foto Tips Carousel -->
+                    <div class="photo-tips-carousel">
+                        <div class="photo-tip active">
+                            <div class="tip-icon"><i class="fas fa-tshirt"></i></div>
+                            <div class="tip-content">
+                                <strong>Flat lay</strong>
+                                <span>Leg het item plat op een effen ondergrond</span>
+                            </div>
+                        </div>
+                        <div class="photo-tip">
+                            <div class="tip-icon"><i class="fas fa-sun"></i></div>
+                            <div class="tip-content">
+                                <strong>Goede verlichting</strong>
+                                <span>Gebruik daglicht voor de beste kleuren</span>
+                            </div>
+                        </div>
+                        <div class="photo-tip">
+                            <div class="tip-icon"><i class="fas fa-crop-alt"></i></div>
+                            <div class="tip-content">
+                                <strong>Vul het frame</strong>
+                                <span>Zorg dat het kledingstuk goed zichtbaar is</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="image-upload-options">
-                        <div class="upload-option">
+                    
+                    <!-- Preview Area (eerst tonen) -->
+                    <div class="image-preview-container" id="imagePreviewContainer">
+                        <div class="preview-placeholder" id="previewPlaceholder">
+                            <i class="fas fa-image"></i>
+                            <span>Foto preview</span>
+                        </div>
+                        <div class="image-preview" id="imagePreview"></div>
+                    </div>
+                    
+                    <!-- Upload Opties -->
+                    <div class="image-upload-grid">
+                        <div class="upload-card primary">
                             <input type="file" id="clothingCamera" accept="image/*" capture="environment">
-                            <label for="clothingCamera" class="upload-label camera-btn">
-                                <i class="fas fa-camera"></i> Maak Foto
+                            <label for="clothingCamera">
+                                <div class="upload-icon"><i class="fas fa-camera"></i></div>
+                                <span>Camera</span>
                             </label>
                         </div>
-                        <div class="upload-option">
+                        <div class="upload-card">
                             <input type="file" id="clothingImage" accept="image/*">
-                            <label for="clothingImage" class="upload-label">
-                                <i class="fas fa-image"></i> Kies uit Galerij
+                            <label for="clothingImage">
+                                <div class="upload-icon"><i class="fas fa-images"></i></div>
+                                <span>Galerij</span>
+                            </label>
+                        </div>
+                        <div class="upload-card">
+                            <input type="text" id="clothingImageUrl" placeholder="URL...">
+                            <label for="clothingImageUrl" class="url-label">
+                                <div class="upload-icon"><i class="fas fa-link"></i></div>
+                                <span>Link</span>
                             </label>
                         </div>
                     </div>
-                    <div class="url-section">
-                        <div class="upload-divider">of plak een URL</div>
-                        <div class="url-option">
-                            <input type="url" id="clothingImageUrl" placeholder="https://...">
-                        </div>
-                    </div>
-                    <div class="image-preview" id="imagePreview"></div>
                 </div>
 
                 <button type="submit" class="btn-submit">

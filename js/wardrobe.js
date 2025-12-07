@@ -163,7 +163,15 @@ const WardrobeManager = {
             modal.classList.remove('active');
             // Reset form
             document.getElementById('addClothingForm')?.reset();
-            document.getElementById('imagePreview').innerHTML = '';
+            
+            // Reset preview
+            const preview = document.getElementById('imagePreview');
+            const container = document.getElementById('imagePreviewContainer');
+            const placeholder = document.getElementById('previewPlaceholder');
+            
+            if (preview) preview.innerHTML = '';
+            if (container) container.classList.remove('has-image');
+            if (placeholder) placeholder.style.display = 'flex';
         }
     },
 
@@ -195,8 +203,24 @@ const WardrobeManager = {
         this.closeAddModal();
         this.renderClothing();
 
-        // Show success message
-        this.showNotification('Kledingstuk toegevoegd! 👕');
+        // Show success message with animation
+        this.showSuccessAnimation();
+        this.showNotification(`${name} toegevoegd aan je kast! 🎉`);
+    },
+
+    showSuccessAnimation() {
+        // Trigger confetti effect
+        const container = document.createElement('div');
+        container.className = 'confetti-container';
+        container.innerHTML = Array(20).fill('').map(() => 
+            `<div class="confetti-piece" style="
+                left: ${Math.random() * 100}%;
+                animation-delay: ${Math.random() * 0.3}s;
+                background: ${['#6366f1', '#f472b6', '#10b981', '#f59e0b', '#06b6d4'][Math.floor(Math.random() * 5)]};
+            "></div>`
+        ).join('');
+        document.body.appendChild(container);
+        setTimeout(() => container.remove(), 2000);
     },
 
     deleteClothing(id) {
@@ -213,22 +237,64 @@ const WardrobeManager = {
             const reader = new FileReader();
             reader.onload = (event) => {
                 const preview = document.getElementById('imagePreview');
-                preview.innerHTML = `<img src="${event.target.result}" alt="Preview">`;
+                const container = document.getElementById('imagePreviewContainer');
+                const placeholder = document.getElementById('previewPlaceholder');
+                
+                if (placeholder) placeholder.style.display = 'none';
+                if (container) container.classList.add('has-image');
+                
+                preview.innerHTML = `
+                    <img src="${event.target.result}" alt="Preview">
+                    <button type="button" class="remove-preview-btn" onclick="WardrobeManager.removePreview()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                
+                // Success feedback
+                this.showNotification('Foto toegevoegd! 📸');
             };
             reader.readAsDataURL(file);
         }
+    },
+
+    removePreview() {
+        const preview = document.getElementById('imagePreview');
+        const container = document.getElementById('imagePreviewContainer');
+        const placeholder = document.getElementById('previewPlaceholder');
+        
+        preview.innerHTML = '';
+        if (container) container.classList.remove('has-image');
+        if (placeholder) placeholder.style.display = 'flex';
+        
+        // Reset file inputs
+        const cameraInput = document.getElementById('clothingCamera');
+        const galleryInput = document.getElementById('clothingImage');
+        if (cameraInput) cameraInput.value = '';
+        if (galleryInput) galleryInput.value = '';
     },
 
     previewUrlImage(e) {
         const url = e.target.value;
         if (url) {
             const preview = document.getElementById('imagePreview');
+            const container = document.getElementById('imagePreviewContainer');
+            const placeholder = document.getElementById('previewPlaceholder');
             const img = new Image();
+            
             img.onload = () => {
-                preview.innerHTML = `<img src="${url}" alt="Preview">`;
+                if (placeholder) placeholder.style.display = 'none';
+                if (container) container.classList.add('has-image');
+                
+                preview.innerHTML = `
+                    <img src="${url}" alt="Preview">
+                    <button type="button" class="remove-preview-btn" onclick="WardrobeManager.removePreview()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                this.showNotification('Afbeelding geladen! 🖼️');
             };
             img.onerror = () => {
-                preview.innerHTML = '<p style="color: #e17055;">Kon afbeelding niet laden</p>';
+                preview.innerHTML = '<p style="color: #e17055; padding: 10px;">Kon afbeelding niet laden</p>';
             };
             img.src = url;
         }
