@@ -162,10 +162,13 @@ const WardrobeManager = {
             const statusBadge = this.getStatusBadge(status);
             
             return `
-                <div class="clothing-card ${status}" data-id="${item.id}" onclick="WardrobeManager.showItemDetail('${item.id}')">
-                    <img src="${item.image}" alt="${item.name}">
+                <div class="clothing-card ${status}" data-id="${item.id}">
+                    <img src="${item.image}" alt="${item.name}" onclick="WardrobeManager.showItemDetail('${item.id}')">
                     ${statusBadge}
-                    <div class="clothing-card-info">
+                    <button class="edit-item-btn" onclick="WardrobeManager.showItemDetail('${item.id}')">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                    <div class="clothing-card-info" onclick="WardrobeManager.showItemDetail('${item.id}')">
                         <h4>${item.name}</h4>
                         <span>${item.color || ''}</span>
                     </div>
