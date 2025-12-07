@@ -9,6 +9,9 @@ const WardrobeManager = {
     selectedCategory: null,
     selectedColor: null,
     selectedSeason: 'all',
+    selectedTags: [],
+    selectedPrice: null,
+    removeBackground: false,
 
     init() {
         console.log('👕 WardrobeManager initialiseren...');
@@ -87,6 +90,33 @@ const WardrobeManager = {
                 this.selectedSeason = btn.dataset.value || btn.dataset.season || 'all';
             });
         });
+        
+        // Tag buttons
+        document.querySelectorAll('.tag-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                btn.classList.toggle('active');
+                const tag = btn.dataset.tag;
+                if (this.selectedTags.includes(tag)) {
+                    this.selectedTags = this.selectedTags.filter(t => t !== tag);
+                } else {
+                    this.selectedTags.push(tag);
+                }
+            });
+        });
+        
+        // Remove background toggle
+        const bgToggle = document.getElementById('removeBackgroundToggle');
+        if (bgToggle) {
+            bgToggle.addEventListener('change', (e) => {
+                this.removeBackground = e.target.checked;
+            });
+        }
+        
+        // Detect color button
+        const detectBtn = document.getElementById('detectColorBtn');
+        if (detectBtn) {
+            detectBtn.addEventListener('click', () => this.detectColor());
+        }
         
         // Save button
         const saveBtn = document.querySelector('.btn-save');
@@ -231,12 +261,26 @@ const WardrobeManager = {
         const nameInput = document.querySelector('.details-form input[type="text"]');
         const name = nameInput?.value || this.generateName();
         
+        // Get tags from input
+        const tagsInput = document.getElementById('itemTags');
+        const tagsValue = tagsInput?.value || '';
+        const tags = tagsValue.split(',').map(t => t.trim()).filter(t => t.length > 0);
+        
+        // Get price from input
+        const priceInput = document.getElementById('itemPrice');
+        const price = priceInput?.value ? parseFloat(priceInput.value) : null;
+        
         const item = {
             name: name,
             image: this.selectedPhoto,
             category: this.selectedCategory,
             color: this.selectedColor,
-            season: this.selectedSeason
+            season: this.selectedSeason,
+            tags: tags,
+            price: price,
+            wearCount: 0,
+            lastWorn: null,
+            dateAdded: new Date().toISOString()
         };
         
         // Save to data
@@ -291,10 +335,19 @@ const WardrobeManager = {
         this.selectedCategory = null;
         this.selectedColor = null;
         this.selectedSeason = 'all';
+        this.selectedTags = [];
+        this.selectedPrice = null;
         
         // Reset UI
         const nameInput = document.querySelector('.details-form input[type="text"]');
         if (nameInput) nameInput.value = '';
+        
+        // Reset tags and price inputs
+        const tagsInput = document.getElementById('itemTags');
+        if (tagsInput) tagsInput.value = '';
+        
+        const priceInput = document.getElementById('itemPrice');
+        if (priceInput) priceInput.value = '';
         
         document.querySelectorAll('.cat-option').forEach(o => o.classList.remove('active'));
         document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));

@@ -308,6 +308,294 @@ const App = {
             this.loadShopPage();
         } else if (pageId === 'saved') {
             this.loadSavedPage();
+        } else if (pageId === 'stats') {
+            this.loadStatsPage();
+        } else if (pageId === 'community') {
+            this.loadCommunityPage();
+        } else if (pageId === 'planner') {
+            this.loadPlannerPage();
+        }
+    },
+
+    // ==================== STATS PAGE ====================
+    loadStatsPage() {
+        if (typeof StatsManager === 'undefined') return;
+        
+        // Style Analysis
+        const styleBars = document.getElementById('styleBars');
+        if (styleBars) {
+            const wardrobe = DataManager.getWardrobe();
+            const styleAnalysis = typeof AIStyleMatcher !== 'undefined' 
+                ? AIStyleMatcher.analyzeStyle(wardrobe)
+                : [{ style: 'casual', percentage: 100 }];
+            
+            styleBars.innerHTML = styleAnalysis.slice(0, 4).map(item => `
+                <div class="style-bar">
+                    <span class="style-bar-label">${item.style}</span>
+                    <div class="style-bar-track">
+                        <div class="style-bar-fill" style="width: ${item.percentage}%"></div>
+                    </div>
+                    <span class="style-bar-value">${item.percentage}%</span>
+                </div>
+            `).join('');
+        }
+        
+        // Wardrobe Value
+        const valueEl = document.getElementById('wardrobeValue');
+        const totalEl = document.getElementById('totalItemsStats');
+        if (valueEl) valueEl.textContent = '€' + StatsManager.getTotalValue().toFixed(2);
+        if (totalEl) totalEl.textContent = DataManager.getWardrobe().length;
+        
+        // Favorite Colors
+        const colorStats = document.getElementById('colorStats');
+        if (colorStats) {
+            const analysis = StatsManager.getStyleAnalysis();
+            const colorMap = {
+                white: '#f5f5f5', black: '#1a1a1a', gray: '#6b7280', blue: '#3b82f6',
+                red: '#ef4444', green: '#22c55e', navy: '#1e3a5f', beige: '#d4a574',
+                brown: '#92400e', pink: '#ec4899', yellow: '#eab308', purple: '#8b5cf6'
+            };
+            
+            colorStats.innerHTML = analysis.favoriteColors.map(color => `
+                <div class="color-stat">
+                    <div class="color-stat-dot" style="background: ${colorMap[color] || '#ccc'}"></div>
+                    <span class="color-stat-name">${color}</span>
+                </div>
+            `).join('') || '<p style="color: var(--gray-400)">Voeg kleding toe met kleuren</p>';
+        }
+        
+        // Most Worn
+        const mostWornList = document.getElementById('mostWornList');
+        if (mostWornList) {
+            const { mostWorn } = StatsManager.getWearStats();
+            mostWornList.innerHTML = mostWorn.length > 0 ? mostWorn.map((item, i) => `
+                <div class="worn-item">
+                    <img src="${item.image}" alt="${item.name}" class="worn-item-img">
+                    <div class="worn-item-info">
+                        <div class="worn-item-name">${item.name}</div>
+                        <div class="worn-item-count">${item.wearCount}x gedragen</div>
+                    </div>
+                    ${i === 0 ? '<span class="worn-item-badge">🔥 Top</span>' : ''}
+                </div>
+            `).join('') : '<p style="color: var(--gray-400)">Draag outfits om statistieken te zien</p>';
+        }
+        
+        // Forgotten Items
+        const forgottenList = document.getElementById('forgottenList');
+        if (forgottenList) {
+            const { forgotten } = StatsManager.getWearStats();
+            forgottenList.innerHTML = forgotten.length > 0 ? forgotten.slice(0, 5).map(item => `
+                <div class="forgotten-item">
+                    <img src="${item.image}" alt="${item.name}">
+                    <span>${item.name.split(' ')[0]}</span>
+                </div>
+            `).join('') : '<p style="color: var(--gray-600)">Geen vergeten items 🎉</p>';
+        }
+        
+        // Season Distribution
+        const seasonChart = document.getElementById('seasonChart');
+        if (seasonChart) {
+            const analysis = StatsManager.getStyleAnalysis();
+            const seasons = analysis.seasonDistribution;
+            seasonChart.innerHTML = `
+                <div class="season-item summer">
+                    <i class="fas fa-sun"></i>
+                    <span class="count">${seasons.summer || 0}</span>
+                    <span class="label">Zomer</span>
+                </div>
+                <div class="season-item winter">
+                    <i class="fas fa-snowflake"></i>
+                    <span class="count">${seasons.winter || 0}</span>
+                    <span class="label">Winter</span>
+                </div>
+                <div class="season-item spring">
+                    <i class="fas fa-leaf"></i>
+                    <span class="count">${seasons.spring || 0}</span>
+                    <span class="label">Lente</span>
+                </div>
+                <div class="season-item autumn">
+                    <i class="fas fa-cloud-sun"></i>
+                    <span class="count">${seasons.all || 0}</span>
+                    <span class="label">Altijd</span>
+                </div>
+            `;
+        }
+    },
+
+    // ==================== COMMUNITY PAGE ====================
+    loadCommunityPage() {
+        if (typeof CommunityManager === 'undefined') return;
+        
+        // Setup filter tabs
+        document.querySelectorAll('.comm-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.comm-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                this.renderCommunityLooks(tab.dataset.filter);
+            });
+        });
+        
+        // Initial render
+        this.renderCommunityLooks('popular');
+        
+        // Share button
+        const shareBtn = document.getElementById('btnShareLook');
+        if (shareBtn) {
+            shareBtn.addEventListener('click', () => this.openShareModal());
+        }
+    },
+
+    renderCommunityLooks(filter) {
+        const grid = document.getElementById('communityGrid');
+        if (!grid) return;
+        
+        const looks = CommunityManager.getLooks(filter);
+        
+        grid.innerHTML = looks.map(look => `
+            <div class="community-look">
+                <div class="look-images">
+                    ${look.items.slice(0, 2).map(item => `<img src="${item.image}" alt="${item.name}">`).join('')}
+                </div>
+                <div class="look-info">
+                    <div class="look-user">
+                        <span class="look-avatar">${look.avatar}</span>
+                        <span class="look-username">${look.user}</span>
+                    </div>
+                    <div class="look-title">${look.title}</div>
+                    <div class="look-tags">
+                        ${look.tags.map(tag => `<span class="look-tag">#${tag}</span>`).join('')}
+                    </div>
+                    <div class="look-actions">
+                        <span class="look-likes"><i class="fas fa-heart"></i> ${look.likes}</span>
+                        <button class="btn-save-look" onclick="App.saveCommunityLook('${look.id}')">
+                            <i class="fas fa-bookmark"></i> Opslaan
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    },
+
+    saveCommunityLook(lookId) {
+        App.showSuccess('Opgeslagen!', 'Look toegevoegd aan je collectie');
+    },
+
+    openShareModal() {
+        const modal = document.getElementById('shareModal');
+        const options = document.getElementById('shareOptions');
+        
+        if (modal && options && typeof ShareManager !== 'undefined') {
+            const buttons = ShareManager.getShareButtons();
+            options.innerHTML = buttons.map(btn => `
+                <div class="share-option" style="background: ${btn.color}15" onclick="App.shareVia('${btn.id}')">
+                    <i class="${btn.icon}" style="color: ${btn.color}"></i>
+                    <span>${btn.name}</span>
+                </div>
+            `).join('');
+            modal.classList.add('active');
+        }
+    },
+
+    async shareVia(platform) {
+        const outfit = this.modules.today?.currentOutfit;
+        if (outfit && typeof ShareManager !== 'undefined') {
+            const result = await ShareManager.shareOutfit(outfit, platform);
+            if (result.success) {
+                App.showSuccess('Gedeeld!', result.method === 'clipboard' ? 'Link gekopieerd!' : 'Bedankt voor het delen');
+            }
+        }
+        document.getElementById('shareModal')?.classList.remove('active');
+    },
+
+    // ==================== WEEK PLANNER PAGE ====================
+    loadPlannerPage() {
+        if (typeof WeekPlanner === 'undefined') return;
+        
+        const weekOverview = document.getElementById('weekOverview');
+        const forecastBar = document.getElementById('forecastBar');
+        
+        // Load week
+        const week = WeekPlanner.getWeekOutfits();
+        const today = new Date().toISOString().split('T')[0];
+        
+        if (weekOverview) {
+            weekOverview.innerHTML = week.map(day => {
+                const isToday = day.date === today;
+                const dateObj = new Date(day.date);
+                const dayNum = dateObj.getDate();
+                
+                return `
+                    <div class="day-card ${isToday ? 'today' : ''}">
+                        <div class="day-info">
+                            <span class="day-name">${day.dayName.slice(0, 3)}</span>
+                            <span class="day-date">${dayNum}</span>
+                            <div class="day-weather">
+                                <i class="fas fa-cloud-sun"></i>
+                                <span>16°</span>
+                            </div>
+                        </div>
+                        <div class="day-outfit">
+                            ${day.outfit ? `
+                                <div class="day-outfit-preview">
+                                    ${day.outfit.top?.image ? `<img src="${day.outfit.top.image}" alt="">` : ''}
+                                    ${day.outfit.bottom?.image ? `<img src="${day.outfit.bottom.image}" alt="">` : ''}
+                                </div>
+                            ` : `
+                                <div class="day-outfit-empty">
+                                    <i class="fas fa-plus"></i>
+                                    <span>Plan outfit</span>
+                                </div>
+                            `}
+                        </div>
+                        <button class="btn-plan-day" onclick="App.planOutfitForDay('${day.date}')">
+                            ${day.outfit ? 'Wijzig' : 'Plan'}
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Load forecast
+        if (forecastBar && typeof RealWeatherAPI !== 'undefined') {
+            RealWeatherAPI.getMockForecast().then(forecast => {
+                forecastBar.innerHTML = forecast.map(day => {
+                    const dateObj = new Date(day.date);
+                    const dayName = dateObj.toLocaleDateString('nl-NL', { weekday: 'short' });
+                    const icons = {
+                        sunny: 'fa-sun', cloudy: 'fa-cloud', rainy: 'fa-cloud-rain', 
+                        'partly-cloudy': 'fa-cloud-sun', cold: 'fa-snowflake'
+                    };
+                    return `
+                        <div class="forecast-day">
+                            <span class="day">${dayName}</span>
+                            <i class="fas ${icons[day.condition] || 'fa-cloud'}"></i>
+                            <span class="temp">${day.temp}°</span>
+                        </div>
+                    `;
+                }).join('');
+            });
+        }
+    },
+
+    planOutfitForDay(date) {
+        // Generate a random outfit for the day
+        if (typeof TodayManager !== 'undefined') {
+            const wardrobe = DataManager.getWardrobe();
+            const categories = {
+                tops: wardrobe.filter(i => i.category === 'tops'),
+                bottoms: wardrobe.filter(i => i.category === 'bottoms'),
+                shoes: wardrobe.filter(i => i.category === 'shoes')
+            };
+            
+            const outfit = {
+                top: categories.tops[Math.floor(Math.random() * categories.tops.length)] || null,
+                bottom: categories.bottoms[Math.floor(Math.random() * categories.bottoms.length)] || null,
+                shoes: categories.shoes[Math.floor(Math.random() * categories.shoes.length)] || null
+            };
+            
+            WeekPlanner.setOutfitForDay(date, outfit);
+            this.loadPlannerPage();
+            App.showSuccess('Gepland!', 'Outfit toegevoegd aan je planning');
         }
     },
 
@@ -430,14 +718,40 @@ const App = {
                     </div>
                 `;
             }
-        } else if (tab === 'favorites') {
-            content.innerHTML = `
-                <div class="empty-saved">
-                    <i class="fas fa-heart"></i>
-                    <h3>Nog geen favorieten</h3>
-                    <p>Markeer items als favoriet om ze hier te zien</p>
-                </div>
-            `;
+        } else if (tab === 'wishlist') {
+            const wishlist = typeof WishlistManager !== 'undefined' ? WishlistManager.getWishlist() : [];
+            if (wishlist.length === 0) {
+                content.innerHTML = `
+                    <div class="empty-saved">
+                        <i class="fas fa-heart"></i>
+                        <h3>Je wishlist is leeg</h3>
+                        <p>Voeg items toe vanuit de shop</p>
+                    </div>
+                `;
+            } else {
+                const total = WishlistManager.getTotalValue();
+                content.innerHTML = `
+                    <div class="wishlist-total">
+                        <span class="wishlist-total-label">Totaal wishlist</span>
+                        <span class="wishlist-total-value">€${total.toFixed(2)}</span>
+                    </div>
+                    <div class="wishlist-grid" style="padding: 0 20px;">
+                        ${wishlist.map(item => `
+                            <div class="wishlist-item">
+                                <button class="btn-remove-wishlist" onclick="App.removeFromWishlist('${item.id}')">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                <img src="${item.image}" alt="${item.name}">
+                                <div class="wishlist-item-info">
+                                    <span class="wishlist-item-brand">${item.brand || ''}</span>
+                                    <div class="wishlist-item-name">${item.name}</div>
+                                    <span class="wishlist-item-price">€${item.price?.toFixed(2) || '0.00'}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
         } else if (tab === 'history') {
             const history = DataManager.getHistory();
             if (history.length === 0) {
@@ -504,6 +818,46 @@ const App = {
     openSwipeForCategory(category, source = 'wardrobe') {
         this.modules.swipe?.startSwipe(category, source);
         this.showPage('swipe');
+    },
+
+    // Wishlist functions
+    addToWishlist(itemId) {
+        const item = ShopManager.getItemById(itemId);
+        if (item && typeof WishlistManager !== 'undefined') {
+            WishlistManager.addToWishlist(item);
+            App.showSuccess('Toegevoegd!', 'Item staat op je wishlist');
+        }
+    },
+
+    removeFromWishlist(itemId) {
+        if (typeof WishlistManager !== 'undefined') {
+            WishlistManager.removeFromWishlist(itemId);
+            this.renderSavedContent('wishlist');
+        }
+    },
+
+    // AI Suggestions
+    showAISuggestions() {
+        const modal = document.getElementById('aiSuggestionModal');
+        const suggestions = document.getElementById('aiSuggestions');
+        
+        if (modal && suggestions && typeof AIStyleMatcher !== 'undefined') {
+            const outfit = this.modules.today?.currentOutfit || {};
+            const items = AIStyleMatcher.getShopSuggestions(outfit);
+            
+            suggestions.innerHTML = items.map(item => `
+                <div class="ai-suggestion" onclick="App.addToWishlist('${item.id}')">
+                    <img src="${item.image}" alt="${item.name}">
+                    <div class="ai-suggestion-info">
+                        <div class="ai-suggestion-name">${item.name}</div>
+                        <div class="ai-suggestion-reason">${item.reason}</div>
+                        <div class="ai-suggestion-price">€${item.price.toFixed(2)}</div>
+                    </div>
+                </div>
+            `).join('');
+            
+            modal.classList.add('active');
+        }
     }
 };
 

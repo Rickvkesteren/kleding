@@ -334,12 +334,126 @@
 
             <div class="saved-tabs">
                 <button class="saved-tab active" data-tab="outfits">Outfits</button>
-                <button class="saved-tab" data-tab="favorites">Favorieten</button>
+                <button class="saved-tab" data-tab="wishlist">Wishlist</button>
                 <button class="saved-tab" data-tab="history">Geschiedenis</button>
             </div>
 
             <div class="saved-content" id="savedContent">
                 <!-- Opgeslagen outfits -->
+            </div>
+        </section>
+
+        <!-- ===== STATS PAGE ===== -->
+        <section class="page" id="statsPage">
+            <header class="stats-header">
+                <h1>Statistieken</h1>
+                <span class="subtitle">Inzicht in je garderobe</span>
+            </header>
+
+            <!-- Style Analysis -->
+            <div class="stats-card style-analysis">
+                <h3><i class="fas fa-palette"></i> Jouw Stijl</h3>
+                <div class="style-bars" id="styleBars">
+                    <!-- Dynamisch geladen -->
+                </div>
+            </div>
+
+            <!-- Wardrobe Value -->
+            <div class="stats-row">
+                <div class="stats-card small">
+                    <i class="fas fa-euro-sign"></i>
+                    <span class="stat-number" id="wardrobeValue">€0</span>
+                    <span class="stat-label">Totale waarde</span>
+                </div>
+                <div class="stats-card small">
+                    <i class="fas fa-shirt"></i>
+                    <span class="stat-number" id="totalItemsStats">0</span>
+                    <span class="stat-label">Items</span>
+                </div>
+            </div>
+
+            <!-- Favorite Colors -->
+            <div class="stats-card">
+                <h3><i class="fas fa-heart"></i> Favoriete Kleuren</h3>
+                <div class="color-stats" id="colorStats">
+                    <!-- Dynamisch geladen -->
+                </div>
+            </div>
+
+            <!-- Most/Least Worn -->
+            <div class="stats-card">
+                <h3><i class="fas fa-fire"></i> Meest Gedragen</h3>
+                <div class="worn-list" id="mostWornList">
+                    <!-- Dynamisch geladen -->
+                </div>
+            </div>
+
+            <div class="stats-card forgotten-card">
+                <h3><i class="fas fa-clock"></i> Vergeten Items</h3>
+                <p class="card-desc">Items die je al een tijdje niet hebt gedragen</p>
+                <div class="forgotten-list" id="forgottenList">
+                    <!-- Dynamisch geladen -->
+                </div>
+            </div>
+
+            <!-- Season Distribution -->
+            <div class="stats-card">
+                <h3><i class="fas fa-calendar"></i> Seizoensverdeling</h3>
+                <div class="season-chart" id="seasonChart">
+                    <!-- Dynamisch geladen -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== COMMUNITY PAGE ===== -->
+        <section class="page" id="communityPage">
+            <header class="community-header">
+                <h1>Community</h1>
+                <span class="subtitle">Inspiratie van anderen</span>
+            </header>
+
+            <!-- Filter Tabs -->
+            <div class="community-tabs">
+                <button class="comm-tab active" data-filter="popular">
+                    <i class="fas fa-fire"></i> Populair
+                </button>
+                <button class="comm-tab" data-filter="recent">
+                    <i class="fas fa-clock"></i> Recent
+                </button>
+                <button class="comm-tab" data-filter="following">
+                    <i class="fas fa-user-friends"></i> Volgend
+                </button>
+            </div>
+
+            <!-- Community Looks Grid -->
+            <div class="community-grid" id="communityGrid">
+                <!-- Dynamisch geladen -->
+            </div>
+
+            <!-- Share Your Look CTA -->
+            <div class="share-cta">
+                <button class="btn-share-look" id="btnShareLook">
+                    <i class="fas fa-plus"></i>
+                    <span>Deel jouw look</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- ===== WEEK PLANNER PAGE ===== -->
+        <section class="page" id="plannerPage">
+            <header class="planner-header">
+                <h1>Week Planner</h1>
+                <span class="subtitle">Plan je outfits vooruit</span>
+            </header>
+
+            <!-- Week Overview -->
+            <div class="week-overview" id="weekOverview">
+                <!-- Dynamisch geladen -->
+            </div>
+
+            <!-- Weather Forecast -->
+            <div class="forecast-bar" id="forecastBar">
+                <!-- 7-daagse voorspelling -->
             </div>
         </section>
 
@@ -353,13 +467,17 @@
                 <i class="fas fa-door-open"></i>
                 <span>Kast</span>
             </button>
-            <button class="nav-item" data-page="shop">
-                <i class="fas fa-shopping-bag"></i>
-                <span>Shop</span>
+            <button class="nav-item" data-page="planner">
+                <i class="fas fa-calendar-week"></i>
+                <span>Week</span>
             </button>
-            <button class="nav-item" data-page="saved">
-                <i class="fas fa-bookmark"></i>
-                <span>Opgeslagen</span>
+            <button class="nav-item" data-page="community">
+                <i class="fas fa-users"></i>
+                <span>Community</span>
+            </button>
+            <button class="nav-item" data-page="stats">
+                <i class="fas fa-chart-pie"></i>
+                <span>Stats</span>
             </button>
         </nav>
     </div>
@@ -457,7 +575,11 @@
                             <button class="color-dot" data-color="orange" style="background: #f97316;"></button>
                             <button class="color-dot" data-color="brown" style="background: #92400e;"></button>
                             <button class="color-dot" data-color="beige" style="background: #d4a574;"></button>
+                            <button class="color-dot" data-color="navy" style="background: #1e3a5f;"></button>
                         </div>
+                        <button class="btn-detect-color" id="detectColorBtn" style="display: none;">
+                            <i class="fas fa-magic"></i> Detecteer kleur
+                        </button>
                     </div>
                     <div class="form-group half">
                         <label>Seizoen</label>
@@ -474,6 +596,53 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Tags -->
+                <div class="form-group">
+                    <label>Tags</label>
+                    <div class="tags-select" id="tagsSelect">
+                        <button class="tag-btn" data-tag="casual">Casual</button>
+                        <button class="tag-btn" data-tag="formal">Formeel</button>
+                        <button class="tag-btn" data-tag="sport">Sport</button>
+                        <button class="tag-btn" data-tag="werk">Werk</button>
+                        <button class="tag-btn" data-tag="feest">Feest</button>
+                        <button class="tag-btn" data-tag="date">Date</button>
+                        <button class="tag-btn" data-tag="comfy">Comfy</button>
+                        <button class="tag-btn" data-tag="chic">Chic</button>
+                    </div>
+                </div>
+
+                <!-- Price -->
+                <div class="form-group">
+                    <label>Aankoopprijs (optioneel)</label>
+                    <div class="price-input">
+                        <span class="currency">€</span>
+                        <input type="number" id="itemPrice" placeholder="0.00" step="0.01" min="0">
+                    </div>
+                </div>
+
+                <!-- Remove Background Toggle -->
+                <div class="form-group toggle-group">
+                    <label>
+                        <input type="checkbox" id="removeBackgroundToggle">
+                        <span class="toggle-label">
+                            <i class="fas fa-magic"></i> Achtergrond verwijderen
+                        </span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div class="modal" id="shareModal">
+        <div class="modal-content modal-small">
+            <div class="modal-header-simple">
+                <h2>Delen</h2>
+                <button class="btn-close-modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="share-options" id="shareOptions">
+                <!-- Dynamisch geladen -->
             </div>
         </div>
     </div>
@@ -490,8 +659,23 @@
         </div>
     </div>
 
+    <!-- AI Suggestion Modal -->
+    <div class="modal" id="aiSuggestionModal">
+        <div class="modal-content modal-medium">
+            <div class="modal-header-simple">
+                <h2><i class="fas fa-magic"></i> Complete the Look</h2>
+                <button class="btn-close-modal"><i class="fas fa-times"></i></button>
+            </div>
+            <p class="ai-desc">Gebaseerd op je huidige outfit, raden we deze items aan:</p>
+            <div class="ai-suggestions" id="aiSuggestions">
+                <!-- Dynamisch geladen -->
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="js/app-new.js"></script>
+    <script src="js/features.js"></script>
     <script src="js/today.js"></script>
     <script src="js/swipe-new.js"></script>
     <script src="js/wardrobe-new.js"></script>
