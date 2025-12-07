@@ -383,58 +383,169 @@ const WardrobeManager = {
     },
 
     showItemDetail(itemId) {
-        const item = DataManager.getWardrobe().find(i => i.id === itemId);
+        const wardrobe = DataManager.getWardrobe();
+        const item = wardrobe.find(i => i.id === itemId);
         if (!item) return;
         
         const status = item.status || 'available';
         const wearCount = item.wearCount || 0;
         const lastWorn = item.lastWorn ? new Date(item.lastWorn).toLocaleDateString('nl-NL') : 'Nooit';
+        const addedDate = item.createdAt ? new Date(item.createdAt).toLocaleDateString('nl-NL') : 'Onbekend';
+        
+        // Available colors
+        const colors = ['zwart', 'wit', 'grijs', 'blauw', 'rood', 'groen', 'geel', 'roze', 'bruin', 'beige', 'navy', 'bordeaux'];
+        
+        // Available tags
+        const allTags = ['casual', 'zakelijk', 'sport', 'feest', 'zomer', 'winter', 'favoriet'];
+        const itemTags = item.tags || [];
+        
+        // Seasons
+        const seasons = [
+            { value: 'all', label: 'Alle seizoenen', icon: 'fa-infinity' },
+            { value: 'summer', label: 'Zomer', icon: 'fa-sun' },
+            { value: 'winter', label: 'Winter', icon: 'fa-snowflake' },
+            { value: 'spring', label: 'Lente/Herfst', icon: 'fa-leaf' }
+        ];
         
         // Create detail modal
         const modal = document.createElement('div');
         modal.className = 'item-detail-modal';
         modal.innerHTML = `
-            <div class="item-detail-content">
-                <button class="close-detail"><i class="fas fa-times"></i></button>
+            <div class="item-detail-content full">
+                <div class="detail-header-bar">
+                    <button class="close-detail"><i class="fas fa-times"></i></button>
+                    <span class="header-title">Item Details</span>
+                    <button class="save-detail"><i class="fas fa-check"></i></button>
+                </div>
                 
-                <div class="detail-image">
+                <div class="detail-image large">
                     <img src="${item.image}" alt="${item.name}">
+                    <div class="image-actions">
+                        <button class="img-action" id="changePhotoBtn"><i class="fas fa-camera"></i></button>
+                    </div>
                 </div>
                 
                 <div class="detail-info-section">
-                    <h2>${item.name}</h2>
-                    <div class="detail-meta">
-                        <span class="meta-item"><i class="fas fa-tag"></i> ${item.category || 'Kleding'}</span>
-                        <span class="meta-item"><i class="fas fa-palette"></i> ${item.color || 'Onbekend'}</span>
-                        ${item.price ? `<span class="meta-item"><i class="fas fa-euro-sign"></i> ${item.price}</span>` : ''}
+                    <!-- Editable Name -->
+                    <div class="edit-field">
+                        <label>Naam</label>
+                        <input type="text" id="editItemName" value="${item.name}" placeholder="Naam van het item">
                     </div>
                     
-                    <div class="detail-stats">
-                        <div class="stat-box">
-                            <span class="stat-value">${wearCount}x</span>
-                            <span class="stat-label">Gedragen</span>
-                        </div>
-                        <div class="stat-box">
-                            <span class="stat-value">${lastWorn}</span>
-                            <span class="stat-label">Laatst gedragen</span>
+                    <!-- Category -->
+                    <div class="edit-field">
+                        <label>Categorie</label>
+                        <div class="category-chips">
+                            <button class="cat-chip ${item.category === 'tops' ? 'active' : ''}" data-cat="tops"><i class="fas fa-tshirt"></i> Top</button>
+                            <button class="cat-chip ${item.category === 'bottoms' ? 'active' : ''}" data-cat="bottoms"><i class="fas fa-socks"></i> Broek</button>
+                            <button class="cat-chip ${item.category === 'outerwear' ? 'active' : ''}" data-cat="outerwear"><i class="fas fa-vest"></i> Jas</button>
+                            <button class="cat-chip ${item.category === 'shoes' ? 'active' : ''}" data-cat="shoes"><i class="fas fa-shoe-prints"></i> Schoenen</button>
+                            <button class="cat-chip ${item.category === 'accessories' ? 'active' : ''}" data-cat="accessories"><i class="fas fa-gem"></i> Accessoire</button>
                         </div>
                     </div>
                     
-                    <div class="detail-status-section">
-                        <h4>Status</h4>
-                        <div class="item-detail-status">
-                            <button class="status-action laundry ${status === 'washing' ? 'active' : ''}" data-status="washing">
+                    <!-- Color -->
+                    <div class="edit-field">
+                        <label>Kleur</label>
+                        <div class="color-chips">
+                            ${colors.map(c => `
+                                <button class="color-chip ${item.color === c ? 'active' : ''}" data-color="${c}" style="--chip-color: ${this.getColorHex(c)}">
+                                    ${item.color === c ? '<i class="fas fa-check"></i>' : ''}
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <!-- Season -->
+                    <div class="edit-field">
+                        <label>Seizoen</label>
+                        <div class="season-chips">
+                            ${seasons.map(s => `
+                                <button class="season-chip ${(item.season || 'all') === s.value ? 'active' : ''}" data-season="${s.value}">
+                                    <i class="fas ${s.icon}"></i> ${s.label}
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <!-- Tags -->
+                    <div class="edit-field">
+                        <label>Labels</label>
+                        <div class="tag-chips">
+                            ${allTags.map(t => `
+                                <button class="tag-chip ${itemTags.includes(t) ? 'active' : ''}" data-tag="${t}">
+                                    ${t}
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <!-- Price -->
+                    <div class="edit-field">
+                        <label>Aankoopprijs</label>
+                        <div class="price-input">
+                            <span class="currency">€</span>
+                            <input type="number" id="editItemPrice" value="${item.price || ''}" placeholder="0.00" step="0.01">
+                        </div>
+                    </div>
+                    
+                    <!-- Brand -->
+                    <div class="edit-field">
+                        <label>Merk</label>
+                        <input type="text" id="editItemBrand" value="${item.brand || ''}" placeholder="bijv. H&M, Zara, Nike">
+                    </div>
+                    
+                    <!-- Stats (read-only) -->
+                    <div class="item-statistics">
+                        <h4><i class="fas fa-chart-bar"></i> Statistieken</h4>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <span class="stat-num">${wearCount}x</span>
+                                <span class="stat-text">Gedragen</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-num">${lastWorn}</span>
+                                <span class="stat-text">Laatst</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-num">${addedDate}</span>
+                                <span class="stat-text">Toegevoegd</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Status -->
+                    <div class="edit-field">
+                        <label>Beschikbaarheid</label>
+                        <div class="status-chips">
+                            <button class="status-chip available ${status === 'available' ? 'active' : ''}" data-status="available">
+                                <i class="fas fa-check-circle"></i> Beschikbaar
+                            </button>
+                            <button class="status-chip washing ${status === 'washing' ? 'active' : ''}" data-status="washing">
                                 <i class="fas fa-soap"></i> In de was
                             </button>
-                            <button class="status-action clean ${status === 'available' ? 'active' : ''}" data-status="available">
-                                <i class="fas fa-check"></i> Schoon
+                            <button class="status-chip worn ${status === 'worn' ? 'active' : ''}" data-status="worn">
+                                <i class="fas fa-clock"></i> Gedragen
                             </button>
                         </div>
                     </div>
                     
-                    <div class="detail-actions">
-                        <button class="btn-delete-item">
-                            <i class="fas fa-trash"></i> Verwijderen
+                    <!-- Actions -->
+                    <div class="item-actions-section">
+                        <button class="action-btn vinted" id="sellVintedBtn">
+                            <i class="fas fa-tag"></i>
+                            <span>Verkoop op Vinted</span>
+                            <i class="fas fa-external-link-alt"></i>
+                        </button>
+                        
+                        <button class="action-btn donate" id="donateBtn">
+                            <i class="fas fa-hand-holding-heart"></i>
+                            <span>Doneren</span>
+                        </button>
+                        
+                        <button class="action-btn delete" id="deleteItemBtn">
+                            <i class="fas fa-trash"></i>
+                            <span>Verwijderen</span>
                         </button>
                     </div>
                 </div>
@@ -444,44 +555,142 @@ const WardrobeManager = {
         document.body.appendChild(modal);
         setTimeout(() => modal.classList.add('active'), 10);
         
-        // Event listeners
-        modal.querySelector('.close-detail').addEventListener('click', () => {
+        // Store current values for saving
+        let editedItem = { ...item };
+        
+        // Close handlers
+        const closeModal = () => {
             modal.classList.remove('active');
             setTimeout(() => modal.remove(), 300);
-        });
+        };
         
+        modal.querySelector('.close-detail').addEventListener('click', closeModal);
         modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.classList.remove('active');
-                setTimeout(() => modal.remove(), 300);
-            }
+            if (e.target === modal) closeModal();
         });
         
-        // Status buttons
-        modal.querySelectorAll('.status-action').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const newStatus = btn.dataset.status;
-                DataManager.updateItemStatus(itemId, newStatus);
-                
-                modal.querySelectorAll('.status-action').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                
+        // Save button
+        modal.querySelector('.save-detail').addEventListener('click', () => {
+            // Get all edited values
+            editedItem.name = modal.querySelector('#editItemName').value || item.name;
+            editedItem.price = parseFloat(modal.querySelector('#editItemPrice').value) || null;
+            editedItem.brand = modal.querySelector('#editItemBrand').value || null;
+            
+            // Update in wardrobe
+            const idx = wardrobe.findIndex(i => i.id === itemId);
+            if (idx !== -1) {
+                wardrobe[idx] = editedItem;
+                DataManager.saveWardrobe(wardrobe);
                 this.loadWardrobe();
-                this.showToast(newStatus === 'washing' ? '🧺 In de was gezet' : '✓ Schoon en beschikbaar');
+                this.showToast('✓ Wijzigingen opgeslagen');
+            }
+            closeModal();
+        });
+        
+        // Category chips
+        modal.querySelectorAll('.cat-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                modal.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                editedItem.category = chip.dataset.cat;
             });
         });
         
-        // Delete button
-        modal.querySelector('.btn-delete-item').addEventListener('click', () => {
-            if (confirm(`Weet je zeker dat je "${item.name}" wilt verwijderen?`)) {
+        // Color chips
+        modal.querySelectorAll('.color-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                modal.querySelectorAll('.color-chip').forEach(c => {
+                    c.classList.remove('active');
+                    c.innerHTML = '';
+                });
+                chip.classList.add('active');
+                chip.innerHTML = '<i class="fas fa-check"></i>';
+                editedItem.color = chip.dataset.color;
+            });
+        });
+        
+        // Season chips
+        modal.querySelectorAll('.season-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                modal.querySelectorAll('.season-chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                editedItem.season = chip.dataset.season;
+            });
+        });
+        
+        // Tag chips (multi-select)
+        modal.querySelectorAll('.tag-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                chip.classList.toggle('active');
+                const tag = chip.dataset.tag;
+                editedItem.tags = editedItem.tags || [];
+                if (chip.classList.contains('active')) {
+                    if (!editedItem.tags.includes(tag)) editedItem.tags.push(tag);
+                } else {
+                    editedItem.tags = editedItem.tags.filter(t => t !== tag);
+                }
+            });
+        });
+        
+        // Status chips
+        modal.querySelectorAll('.status-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                modal.querySelectorAll('.status-chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                editedItem.status = chip.dataset.status;
+                DataManager.updateItemStatus(itemId, chip.dataset.status);
+                this.loadWardrobe();
+            });
+        });
+        
+        // Sell on Vinted
+        modal.querySelector('#sellVintedBtn').addEventListener('click', () => {
+            // Open Vinted with pre-filled search (item name)
+            const searchQuery = encodeURIComponent(item.name);
+            window.open(`https://www.vinted.nl/catalog?search_text=${searchQuery}`, '_blank');
+            this.showToast('Vinted geopend in nieuw tabblad');
+        });
+        
+        // Donate button
+        modal.querySelector('#donateBtn').addEventListener('click', () => {
+            if (confirm(`Wil je "${item.name}" markeren als gedoneerd en verwijderen uit je kast?`)) {
                 DataManager.removeClothingItem(itemId);
-                modal.classList.remove('active');
-                setTimeout(() => modal.remove(), 300);
+                closeModal();
                 this.loadWardrobe();
                 this.updateStats();
-                this.showToast('Kledingstuk verwijderd');
+                this.showToast('🎁 Item gemarkeerd als gedoneerd');
             }
         });
+        
+        // Delete button
+        modal.querySelector('#deleteItemBtn').addEventListener('click', () => {
+            if (confirm(`Weet je zeker dat je "${item.name}" wilt verwijderen?`)) {
+                DataManager.removeClothingItem(itemId);
+                closeModal();
+                this.loadWardrobe();
+                this.updateStats();
+                this.showToast('Item verwijderd');
+            }
+        });
+    },
+    
+    // Get hex color for color chips
+    getColorHex(colorName) {
+        const colorMap = {
+            'zwart': '#1a1a1a',
+            'wit': '#ffffff',
+            'grijs': '#808080',
+            'blauw': '#3b82f6',
+            'rood': '#ef4444',
+            'groen': '#22c55e',
+            'geel': '#eab308',
+            'roze': '#ec4899',
+            'bruin': '#92400e',
+            'beige': '#d4b896',
+            'navy': '#1e3a5f',
+            'bordeaux': '#722f37'
+        };
+        return colorMap[colorName] || '#808080';
     },
     
     showToast(message) {

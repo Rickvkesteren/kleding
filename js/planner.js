@@ -284,7 +284,7 @@ const WeekPlannerManager = {
         });
     },
 
-    // Show outfit detail modal
+    // Show outfit detail modal with swipe functionality
     showOutfitDetail(dateStr) {
         const day = this.currentWeek.find(d => d.dateStr === dateStr);
         if (!day || !day.outfit) return;
@@ -300,7 +300,7 @@ const WeekPlannerManager = {
                 </div>
                 <div class="detail-items">
                     ${outfit.items.map(item => `
-                        <div class="detail-item">
+                        <div class="detail-item" data-item-id="${item.id}" data-category="${item.category}">
                             <div class="item-image" style="background-image: url('${item.image}')"></div>
                             <div class="item-info">
                                 <span class="item-name">${item.name}</span>
@@ -309,10 +309,13 @@ const WeekPlannerManager = {
                                 </span>
                             </div>
                             <div class="item-actions">
-                                <button class="status-btn" data-id="${item.id}" data-status="washing">
+                                <button class="swap-btn" data-category="${item.category}" title="Wissel item">
+                                    <i class="fas fa-exchange-alt"></i>
+                                </button>
+                                <button class="status-btn" data-id="${item.id}" data-status="washing" title="Naar de was">
                                     <i class="fas fa-soap"></i>
                                 </button>
-                                <button class="status-btn" data-id="${item.id}" data-status="available">
+                                <button class="status-btn check" data-id="${item.id}" data-status="available" title="Beschikbaar">
                                     <i class="fas fa-check"></i>
                                 </button>
                             </div>
@@ -331,11 +334,24 @@ const WeekPlannerManager = {
         `;
 
         document.body.appendChild(modal);
+        
+        // Store reference for swipe callback
+        this.currentEditModal = modal;
+        this.currentEditDate = dateStr;
 
         // Event listeners for modal
         modal.querySelector('.close-detail').addEventListener('click', () => modal.remove());
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
+        });
+
+        // Swap buttons - open swipe to change item
+        modal.querySelectorAll('.swap-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const category = btn.dataset.category;
+                this.openSwipeForCategory(category, dateStr);
+            });
         });
 
         modal.querySelectorAll('.status-btn').forEach(btn => {
@@ -360,6 +376,103 @@ const WeekPlannerManager = {
             modal.remove();
             this.clearOutfit(dateStr);
         });
+    },
+
+    // Open swipe to change an item in the planned outfit
+    openSwipeForCategory(category, dateStr) {
+        // Get available items for this category
+        const wardrobe = DataManager.getWardrobe().filter(item => 
+            item.category === category && (!item.status || item.status === 'available')
+        );
+        
+        if (wardrobe.length === 0) {
+            this.showToast('Geen beschikbare items in deze categorie');
+            return;
+        }
+        
+        // Create swipe modal
+        const swipeModal = document.createElement('div');
+        swipeModal.className = 'swipe-select-modal';
+        swipeModal.innerHTML = `
+            <div class="swipe-select-content">
+                <div class="swipe-header">
+                    <button class="close-swipe"><i class="fas fa-arrow-left"></i></button>
+                    <h3>Kies ${this.getCategoryLabel(category)}</h3>
+                    <span>${wardrobe.length} beschikbaar</span>
+                </div>
+                <div class="swipe-items-grid">
+                    ${wardrobe.map(item => `
+                        <div class="swipe-item-card" data-id="${item.id}">
+                            <img src="${item.image}" alt="${item.name}">
+                            <div class="swipe-item-info">
+                                <span class="item-name">${item.name}</span>
+                                <span class="item-color">${item.color || ''}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(swipeModal);
+        setTimeout(() => swipeModal.classList.add('active'), 10);
+        
+        // Close button
+        swipeModal.querySelector('.close-swipe').addEventListener('click', () => {
+            swipeModal.classList.remove('active');
+            setTimeout(() => swipeModal.remove(), 300);
+        });
+        
+        // Item selection
+        swipeModal.querySelectorAll('.swipe-item-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const itemId = card.dataset.id;
+                const selectedItem = wardrobe.find(i => i.id === itemId);
+                
+                if (selectedItem) {
+                    this.replaceItemInOutfit(dateStr, category, selectedItem);
+                    swipeModal.classList.remove('active');
+                    setTimeout(() => swipeModal.remove(), 300);
+                    
+                    // Refresh the detail modal
+                    if (this.currentEditModal) {
+                        this.currentEditModal.remove();
+                        this.showOutfitDetail(dateStr);
+                    }
+                }
+            });
+        });
+    },
+    
+    // Replace an item in the planned outfit
+    replaceItemInOutfit(dateStr, category, newItem) {
+        const outfit = DataManager.getOutfitForDate(dateStr);
+        if (!outfit) return;
+        
+        // Find and replace the item with matching category
+        const index = outfit.items.findIndex(i => i.category === category);
+        if (index !== -1) {
+            outfit.items[index] = newItem;
+        } else {
+            outfit.items.push(newItem);
+        }
+        
+        DataManager.saveOutfitForDate(dateStr, outfit);
+        this.generateWeekDays();
+        this.renderWeekDays();
+        this.showToast('Item gewisseld!');
+    },
+    
+    // Get category label
+    getCategoryLabel(category) {
+        const labels = {
+            tops: 'een top',
+            bottoms: 'een broek',
+            shoes: 'schoenen',
+            outerwear: 'een jas',
+            accessories: 'accessoire'
+        };
+        return labels[category] || category;
     },
 
     // Get status label
