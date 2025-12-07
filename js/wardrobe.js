@@ -414,14 +414,14 @@ const WardrobeManager = {
         const modal = document.createElement('div');
         modal.className = 'item-detail-modal';
         modal.innerHTML = `
-            <div class="item-detail-content full">
+            <div class="item-detail-content">
                 <div class="detail-header-bar">
-                    <button class="close-detail"><i class="fas fa-times"></i></button>
+                    <button class="close-detail"><i class="fas fa-arrow-left"></i></button>
                     <span class="header-title">Item Details</span>
                     <button class="save-detail"><i class="fas fa-check"></i></button>
                 </div>
                 
-                <div class="detail-image large">
+                <div class="detail-image">
                     <img src="${item.image}" alt="${item.name}">
                     <div class="image-actions">
                         <button class="img-action" id="changePhotoBtn"><i class="fas fa-camera"></i></button>

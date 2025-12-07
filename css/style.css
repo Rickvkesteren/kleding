@@ -625,9 +625,9 @@ body { font-family: var(--font); background: var(--gray-100); color: var(--gray-
 .forecast-day.today i { color: white; }
 .forecast-day .fc-temp { font-size: 0.95rem; font-weight: 700; }
 
-/* Outfit Detail Modal */
+/* Outfit Detail Modal - Bottom Sheet Style */
 .outfit-detail-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: flex-end; justify-content: center; animation: fadeIn 0.2s ease; }
-.outfit-detail-content { background: white; width: 100%; max-width: 430px; border-radius: var(--radius-xl) var(--radius-xl) 0 0; padding: 20px; animation: slideUp 0.3s ease; max-height: 80vh; overflow-y: auto; }
+.outfit-detail-content { background: white; width: 100%; max-width: 430px; margin: 0 auto; border-radius: var(--radius-xl) var(--radius-xl) 0 0; padding: 20px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); animation: slideUp 0.3s ease; max-height: 85vh; overflow-y: auto; }
 .detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .detail-header h3 { font-size: 1.1rem; font-weight: 700; }
 .close-detail { background: none; border: none; font-size: 1.2rem; color: var(--gray-500); cursor: pointer; }
@@ -688,21 +688,21 @@ body { font-family: var(--font); background: var(--gray-100); color: var(--gray-
 .avail-filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
 .avail-filter-btn i { margin-right: 4px; }
 
-/* Item Detail Modal */
-.item-detail-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; }
-.item-detail-modal.active { opacity: 1; }
-.item-detail-content { background: white; width: 90%; max-width: 400px; border-radius: var(--radius-xl); overflow: hidden; position: relative; transform: scale(0.9); transition: transform 0.3s; max-height: 90vh; overflow-y: auto; }
-.item-detail-modal.active .item-detail-content { transform: scale(1); }
-.item-detail-content.full { max-width: 100%; width: 100%; max-height: 100vh; height: 100%; border-radius: 0; }
-.item-detail-content .close-detail { position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; background: rgba(255,255,255,0.9); border: none; border-radius: 50%; cursor: pointer; z-index: 10; font-size: 1.1rem; color: var(--gray-600); box-shadow: var(--shadow-md); }
-.item-detail-content .detail-image { height: 250px; background: var(--gray-100); position: relative; }
-.item-detail-content .detail-image.large { height: 280px; }
+/* Item Detail Modal - App Style Fullscreen */
+.item-detail-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: white; z-index: 1000; opacity: 0; transition: opacity 0.3s; transform: translateX(100%); }
+.item-detail-modal.active { opacity: 1; transform: translateX(0); }
+.item-detail-content { background: white; width: 100%; max-width: 430px; margin: 0 auto; height: 100%; overflow-y: auto; position: relative; }
+.item-detail-modal.active .item-detail-content { transform: none; }
+.item-detail-content .close-detail { position: absolute; top: 16px; left: 16px; width: 40px; height: 40px; background: rgba(255,255,255,0.95); border: none; border-radius: 50%; cursor: pointer; z-index: 10; font-size: 1.1rem; color: var(--gray-600); box-shadow: var(--shadow-md); }
+.item-detail-content .detail-image { height: 220px; background: var(--gray-100); position: relative; display: flex; align-items: center; justify-content: center; }
+.item-detail-content .detail-image.large { height: 240px; }
 .item-detail-content .detail-image img { width: 100%; height: 100%; object-fit: contain; }
 .image-actions { position: absolute; bottom: 12px; right: 12px; }
 .img-action { width: 40px; height: 40px; background: white; border: none; border-radius: 50%; cursor: pointer; box-shadow: var(--shadow-md); }
-.detail-header-bar { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--gray-200); position: sticky; top: 0; background: white; z-index: 20; }
-.detail-header-bar .header-title { font-weight: 700; }
-.detail-header-bar .save-detail { background: var(--primary); color: white; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; }
+.detail-header-bar { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--gray-200); position: sticky; top: 0; background: white; z-index: 20; }
+.detail-header-bar .close-detail { background: none; border: none; width: 40px; height: 40px; cursor: pointer; font-size: 1.1rem; color: var(--gray-600); display: flex; align-items: center; justify-content: center; }
+.detail-header-bar .header-title { font-weight: 700; font-size: 1.1rem; }
+.detail-header-bar .save-detail { background: var(--primary); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1rem; }
 .detail-info-section { padding: 20px; padding-bottom: 100px; }
 .detail-info-section h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 12px; }
 
@@ -837,41 +837,42 @@ body { font-family: var(--font); background: var(--gray-100); color: var(--gray-
 .btn-delete-item { width: 100%; padding: 14px; background: var(--gray-100); border: none; border-radius: var(--radius-lg); color: var(--danger); font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--font); transition: all 0.2s; }
 .btn-delete-item:hover { background: #fee2e2; }
 
-/* Tinder Swipe Modal voor Planner */
+/* Tinder Swipe Modal voor Planner - App Style */
 .tinder-swipe-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: white; z-index: 1200; transform: translateX(100%); transition: transform 0.3s ease; }
 .tinder-swipe-modal.active { transform: translateX(0); }
-.tinder-swipe-content { height: 100%; display: flex; flex-direction: column; }
+.tinder-swipe-content { height: 100%; max-width: 430px; margin: 0 auto; display: flex; flex-direction: column; }
 
-.tinder-header { display: flex; align-items: center; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--gray-200); }
-.tinder-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--gray-600); padding: 8px; }
+.tinder-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--gray-200); }
+.tinder-close { background: none; border: none; font-size: 1.1rem; cursor: pointer; color: var(--gray-600); width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
 .tinder-title { flex: 1; }
-.tinder-category { font-size: 1.1rem; font-weight: 700; display: block; }
-.tinder-subtitle { font-size: 0.85rem; color: var(--gray-500); }
-.tinder-progress { font-size: 0.85rem; color: var(--gray-500); background: var(--gray-100); padding: 6px 12px; border-radius: 20px; }
+.tinder-category { font-size: 1rem; font-weight: 700; display: block; }
+.tinder-subtitle { font-size: 0.8rem; color: var(--gray-500); }
+.tinder-progress { font-size: 0.8rem; color: var(--gray-500); background: var(--gray-100); padding: 6px 12px; border-radius: 20px; }
 
-.tinder-card-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; overflow: hidden; position: relative; }
+.tinder-card-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 16px; overflow: hidden; position: relative; }
 
-.tinder-card { width: calc(100% - 40px); max-width: 340px; background: white; border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); overflow: hidden; cursor: grab; user-select: none; position: relative; }
+.tinder-card { width: 100%; max-width: 320px; background: white; border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); overflow: hidden; cursor: grab; user-select: none; position: relative; }
 .tinder-card:active { cursor: grabbing; }
-.tinder-card-image { position: relative; height: 340px; overflow: hidden; }
+.tinder-card-image { position: relative; height: 300px; overflow: hidden; }
 .tinder-card-image img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
-.tinder-card-info { padding: 20px; }
-.tinder-card-info h3 { font-size: 1.3rem; font-weight: 700; margin-bottom: 4px; }
-.tinder-card-info p { color: var(--gray-500); font-size: 0.95rem; }
+.tinder-card-info { padding: 16px; }
+.tinder-card-info h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 4px; }
+.tinder-card-info p { color: var(--gray-500); font-size: 0.9rem; }
 
 /* Tinder Overlays */
-.tinder-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; opacity: 0; transition: opacity 0.1s; pointer-events: none; z-index: 10; }
+.tinder-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; opacity: 0; transition: opacity 0.1s; pointer-events: none; z-index: 10; }
 .tinder-overlay.like { background: rgba(34, 197, 94, 0.9); color: white; }
 .tinder-overlay.nope { background: rgba(239, 68, 68, 0.9); color: white; }
 
-.tinder-actions { display: flex; justify-content: center; gap: 40px; padding: 20px; padding-bottom: 40px; }
-.tinder-btn { width: 70px; height: 70px; border-radius: 50%; border: 3px solid; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; transition: all 0.2s; background: white; }
+.tinder-actions { display: flex; justify-content: center; gap: 40px; padding: 16px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+.tinder-btn { width: 64px; height: 64px; border-radius: 50%; border: 3px solid; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; transition: all 0.2s; background: white; }
 .tinder-btn.nope { border-color: var(--danger); color: var(--danger); }
 .tinder-btn.like { border-color: var(--success); color: var(--success); }
 .tinder-btn:hover { transform: scale(1.1); }
 .tinder-btn.nope:hover { background: var(--danger); color: white; }
 .tinder-btn.like:hover { background: var(--success); color: white; }
 
-.swipe-empty-state { text-align: center; color: var(--gray-500); }
-.swipe-empty-state i { font-size: 4rem; color: var(--success); margin-bottom: 16px; }
-.swipe-empty-state h3 { font-size: 1.3rem; color: var(--gray-700); margin-bottom: 8px; }
+.swipe-empty-state { text-align: center; color: var(--gray-500); padding: 40px 20px; }
+.swipe-empty-state i { font-size: 3rem; color: var(--success); margin-bottom: 16px; display: block; }
+.swipe-empty-state h3 { font-size: 1.2rem; color: var(--gray-700); margin-bottom: 8px; }
+
