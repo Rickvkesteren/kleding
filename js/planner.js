@@ -378,70 +378,199 @@ const WeekPlannerManager = {
         });
     },
 
-    // Open swipe to change an item in the planned outfit
+    // Open Tinder-style swipe to change an item
     openSwipeForCategory(category, dateStr) {
         // Get available items for this category
-        const wardrobe = DataManager.getWardrobe().filter(item => 
+        const items = DataManager.getWardrobe().filter(item => 
             item.category === category && (!item.status || item.status === 'available')
         );
         
-        if (wardrobe.length === 0) {
+        if (items.length === 0) {
             this.showToast('Geen beschikbare items in deze categorie');
             return;
         }
         
-        // Create swipe modal
+        let currentIndex = 0;
+        
+        // Create Tinder-style swipe modal
         const swipeModal = document.createElement('div');
-        swipeModal.className = 'swipe-select-modal';
-        swipeModal.innerHTML = `
-            <div class="swipe-select-content">
-                <div class="swipe-header">
-                    <button class="close-swipe"><i class="fas fa-arrow-left"></i></button>
-                    <h3>Kies ${this.getCategoryLabel(category)}</h3>
-                    <span>${wardrobe.length} beschikbaar</span>
+        swipeModal.className = 'tinder-swipe-modal';
+        
+        const renderCard = () => {
+            if (currentIndex >= items.length) {
+                swipeModal.querySelector('.tinder-card-container').innerHTML = `
+                    <div class="swipe-empty-state">
+                        <i class="fas fa-check-circle"></i>
+                        <h3>Alles bekeken!</h3>
+                        <p>Geen items meer in deze categorie</p>
+                    </div>
+                `;
+                swipeModal.querySelector('.tinder-actions').style.display = 'none';
+                return;
+            }
+            
+            const item = items[currentIndex];
+            swipeModal.querySelector('.tinder-card-container').innerHTML = `
+                <div class="tinder-card" id="tinderCard">
+                    <div class="tinder-card-image">
+                        <img src="${item.image}" alt="${item.name}">
+                        <div class="tinder-overlay like"><i class="fas fa-check"></i></div>
+                        <div class="tinder-overlay nope"><i class="fas fa-times"></i></div>
+                    </div>
+                    <div class="tinder-card-info">
+                        <h3>${item.name}</h3>
+                        <p>${item.color || ''} ${item.brand ? '• ' + item.brand : ''}</p>
+                    </div>
                 </div>
-                <div class="swipe-items-grid">
-                    ${wardrobe.map(item => `
-                        <div class="swipe-item-card" data-id="${item.id}">
-                            <img src="${item.image}" alt="${item.name}">
-                            <div class="swipe-item-info">
-                                <span class="item-name">${item.name}</span>
-                                <span class="item-color">${item.color || ''}</span>
-                            </div>
-                        </div>
-                    `).join('')}
+            `;
+            swipeModal.querySelector('.tinder-progress').textContent = `${currentIndex + 1}/${items.length}`;
+            
+            // Setup drag
+            this.setupTinderDrag(swipeModal, items, currentIndex, dateStr, category);
+        };
+        
+        swipeModal.innerHTML = `
+            <div class="tinder-swipe-content">
+                <div class="tinder-header">
+                    <button class="tinder-close"><i class="fas fa-arrow-left"></i></button>
+                    <div class="tinder-title">
+                        <span class="tinder-category">${this.getCategoryLabel(category)}</span>
+                        <span class="tinder-subtitle">Swipe om te kiezen</span>
+                    </div>
+                    <span class="tinder-progress">${currentIndex + 1}/${items.length}</span>
+                </div>
+                <div class="tinder-card-container"></div>
+                <div class="tinder-actions">
+                    <button class="tinder-btn nope"><i class="fas fa-times"></i></button>
+                    <button class="tinder-btn like"><i class="fas fa-check"></i></button>
                 </div>
             </div>
         `;
         
         document.body.appendChild(swipeModal);
-        setTimeout(() => swipeModal.classList.add('active'), 10);
+        setTimeout(() => {
+            swipeModal.classList.add('active');
+            renderCard();
+        }, 10);
+        
+        // Store render function for later
+        swipeModal.renderCard = renderCard;
+        swipeModal.items = items;
+        swipeModal.currentIndex = currentIndex;
+        swipeModal.dateStr = dateStr;
+        swipeModal.category = category;
         
         // Close button
-        swipeModal.querySelector('.close-swipe').addEventListener('click', () => {
+        swipeModal.querySelector('.tinder-close').addEventListener('click', () => {
             swipeModal.classList.remove('active');
             setTimeout(() => swipeModal.remove(), 300);
         });
         
-        // Item selection
-        swipeModal.querySelectorAll('.swipe-item-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const itemId = card.dataset.id;
-                const selectedItem = wardrobe.find(i => i.id === itemId);
-                
-                if (selectedItem) {
-                    this.replaceItemInOutfit(dateStr, category, selectedItem);
-                    swipeModal.classList.remove('active');
-                    setTimeout(() => swipeModal.remove(), 300);
-                    
-                    // Refresh the detail modal
-                    if (this.currentEditModal) {
-                        this.currentEditModal.remove();
-                        this.showOutfitDetail(dateStr);
-                    }
-                }
-            });
+        // Nope button
+        swipeModal.querySelector('.tinder-btn.nope').addEventListener('click', () => {
+            this.animateSwipe(swipeModal, 'left');
         });
+        
+        // Like button (select item)
+        swipeModal.querySelector('.tinder-btn.like').addEventListener('click', () => {
+            this.selectSwipeItem(swipeModal, items[swipeModal.currentIndex], dateStr, category);
+        });
+    },
+    
+    setupTinderDrag(modal, items, index, dateStr, category) {
+        const card = modal.querySelector('#tinderCard');
+        if (!card) return;
+        
+        let startX = 0, currentX = 0, isDragging = false;
+        
+        const handleStart = (e) => {
+            isDragging = true;
+            startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+            card.style.transition = 'none';
+        };
+        
+        const handleMove = (e) => {
+            if (!isDragging) return;
+            currentX = (e.type === 'touchmove' ? e.touches[0].clientX : e.clientX) - startX;
+            
+            const rotation = currentX * 0.1;
+            card.style.transform = `translateX(${currentX}px) rotate(${rotation}deg)`;
+            
+            // Show overlays
+            if (currentX > 50) {
+                card.querySelector('.tinder-overlay.like').style.opacity = Math.min(currentX / 100, 1);
+                card.querySelector('.tinder-overlay.nope').style.opacity = 0;
+            } else if (currentX < -50) {
+                card.querySelector('.tinder-overlay.nope').style.opacity = Math.min(-currentX / 100, 1);
+                card.querySelector('.tinder-overlay.like').style.opacity = 0;
+            } else {
+                card.querySelector('.tinder-overlay.like').style.opacity = 0;
+                card.querySelector('.tinder-overlay.nope').style.opacity = 0;
+            }
+        };
+        
+        const handleEnd = () => {
+            if (!isDragging) return;
+            isDragging = false;
+            card.style.transition = 'transform 0.3s ease';
+            
+            if (currentX > 100) {
+                // Swiped right - select item
+                this.selectSwipeItem(modal, items[modal.currentIndex], dateStr, category);
+            } else if (currentX < -100) {
+                // Swiped left - skip
+                this.animateSwipe(modal, 'left');
+            } else {
+                // Return to center
+                card.style.transform = 'translateX(0) rotate(0deg)';
+                card.querySelector('.tinder-overlay.like').style.opacity = 0;
+                card.querySelector('.tinder-overlay.nope').style.opacity = 0;
+            }
+            currentX = 0;
+        };
+        
+        card.addEventListener('touchstart', handleStart, { passive: true });
+        card.addEventListener('touchmove', handleMove, { passive: true });
+        card.addEventListener('touchend', handleEnd);
+        card.addEventListener('mousedown', handleStart);
+        document.addEventListener('mousemove', handleMove);
+        document.addEventListener('mouseup', handleEnd);
+    },
+    
+    animateSwipe(modal, direction) {
+        const card = modal.querySelector('#tinderCard');
+        if (!card) return;
+        
+        const translateX = direction === 'left' ? -500 : 500;
+        card.style.transition = 'transform 0.3s ease';
+        card.style.transform = `translateX(${translateX}px) rotate(${direction === 'left' ? -30 : 30}deg)`;
+        
+        setTimeout(() => {
+            modal.currentIndex++;
+            modal.renderCard();
+        }, 300);
+    },
+    
+    selectSwipeItem(modal, item, dateStr, category) {
+        const card = modal.querySelector('#tinderCard');
+        if (card) {
+            card.style.transition = 'transform 0.3s ease';
+            card.style.transform = 'translateX(500px) rotate(30deg)';
+        }
+        
+        setTimeout(() => {
+            this.replaceItemInOutfit(dateStr, category, item);
+            modal.classList.remove('active');
+            setTimeout(() => modal.remove(), 300);
+            
+            // Refresh the detail modal
+            if (this.currentEditModal) {
+                this.currentEditModal.remove();
+                this.showOutfitDetail(dateStr);
+            }
+            
+            this.showToast(`${item.name} geselecteerd!`);
+        }, 300);
     },
     
     // Replace an item in the planned outfit
