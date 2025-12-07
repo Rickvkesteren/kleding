@@ -500,14 +500,36 @@
                 <span class="subtitle">Plan je outfits vooruit</span>
             </header>
 
-            <!-- Week Overview -->
-            <div class="week-overview" id="weekOverview">
-                <!-- Dynamisch geladen -->
+            <!-- Availability Quick Stats -->
+            <div class="availability-bar">
+                <div class="avail-stat available">
+                    <i class="fas fa-check-circle"></i>
+                    <span id="availableCount">0</span>
+                    <small>Beschikbaar</small>
+                </div>
+                <div class="avail-stat washing">
+                    <i class="fas fa-soap"></i>
+                    <span id="washingCount">0</span>
+                    <small>In de was</small>
+                </div>
+                <div class="avail-stat worn">
+                    <i class="fas fa-clock"></i>
+                    <span id="wornTodayCount">0</span>
+                    <small>Gedragen</small>
+                </div>
+            </div>
+
+            <!-- Week Days -->
+            <div class="week-days" id="weekDays">
+                <!-- Dynamisch geladen: per dag een outfit card -->
             </div>
 
             <!-- Weather Forecast -->
-            <div class="forecast-bar" id="forecastBar">
-                <!-- 7-daagse voorspelling -->
+            <div class="forecast-section">
+                <h3><i class="fas fa-cloud-sun"></i> Weersvoorspelling</h3>
+                <div class="forecast-bar" id="forecastBar">
+                    <!-- 7-daagse voorspelling -->
+                </div>
             </div>
         </section>
 
@@ -733,5 +755,6 @@
     <script src="js/today.js"></script>
     <script src="js/swipe.js"></script>
     <script src="js/wardrobe.js"></script>
+    <script src="js/planner.js"></script>
 </body>
 </html>

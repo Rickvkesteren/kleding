@@ -12,7 +12,8 @@ const DataManager = {
         FAVORITES: 'stylemate_favorites',
         HISTORY: 'stylemate_history',
         TODAY_OUTFIT: 'stylemate_today',
-        SETTINGS: 'stylemate_settings'
+        SETTINGS: 'stylemate_settings',
+        WEEK_PLAN: 'stylemate_week_plan'
     },
 
     // Get wardrobe items
@@ -31,9 +32,82 @@ const DataManager = {
         const wardrobe = this.getWardrobe();
         item.id = Date.now().toString();
         item.createdAt = new Date().toISOString();
+        item.status = 'available'; // available, washing, worn
+        item.wearCount = 0;
+        item.lastWorn = null;
         wardrobe.push(item);
         this.saveWardrobe(wardrobe);
         return item;
+    },
+
+    // Update item status
+    updateItemStatus(itemId, status) {
+        const wardrobe = this.getWardrobe();
+        const item = wardrobe.find(i => i.id === itemId);
+        if (item) {
+            item.status = status;
+            if (status === 'worn') {
+                item.lastWorn = new Date().toISOString();
+            }
+            this.saveWardrobe(wardrobe);
+        }
+    },
+
+    // Mark item as washed (available again)
+    markAsWashed(itemId) {
+        this.updateItemStatus(itemId, 'available');
+    },
+
+    // Mark item as in laundry
+    markAsWashing(itemId) {
+        this.updateItemStatus(itemId, 'washing');
+    },
+
+    // Get items by status
+    getItemsByStatus(status) {
+        const wardrobe = this.getWardrobe();
+        return wardrobe.filter(item => item.status === status || (!item.status && status === 'available'));
+    },
+
+    // Get availability stats
+    getAvailabilityStats() {
+        const wardrobe = this.getWardrobe();
+        const stats = { available: 0, washing: 0, worn: 0 };
+        wardrobe.forEach(item => {
+            const status = item.status || 'available';
+            if (stats.hasOwnProperty(status)) {
+                stats[status]++;
+            } else {
+                stats.available++;
+            }
+        });
+        return stats;
+    },
+
+    // Get week plan
+    getWeekPlan() {
+        const data = localStorage.getItem(this.KEYS.WEEK_PLAN);
+        return data ? JSON.parse(data) : {};
+    },
+
+    // Save outfit for specific date
+    saveOutfitForDate(dateStr, outfit) {
+        const plan = this.getWeekPlan();
+        plan[dateStr] = outfit;
+        localStorage.setItem(this.KEYS.WEEK_PLAN, JSON.stringify(plan));
+    },
+
+    // Get outfit for specific date
+    getOutfitForDate(dateStr) {
+        const plan = this.getWeekPlan();
+        return plan[dateStr] || null;
+    },
+
+    // Clear outfit for date
+    clearOutfitForDate(dateStr) {
+        const plan = this.getWeekPlan();
+        delete plan[dateStr];
+        localStorage.setItem(this.KEYS.WEEK_PLAN, JSON.stringify(plan));
     },
 
     // Remove clothing item
@@ -747,93 +821,16 @@ const App = {
 
     // ==================== WEEK PLANNER PAGE ====================
     loadPlannerPage() {
-        if (typeof WeekPlanner === 'undefined') return;
-        
-        const weekOverview = document.getElementById('weekOverview');
-        const forecastBar = document.getElementById('forecastBar');
-        
-        // Load week
-        const week = WeekPlanner.getWeekOutfits();
-        const today = new Date().toISOString().split('T')[0];
-        
-        if (weekOverview) {
-            weekOverview.innerHTML = week.map(day => {
-                const isToday = day.date === today;
-                const dateObj = new Date(day.date);
-                const dayNum = dateObj.getDate();
-                
-                return `
-                    <div class="day-card ${isToday ? 'today' : ''}">
-                        <div class="day-info">
-                            <span class="day-name">${day.dayName.slice(0, 3)}</span>
-                            <span class="day-date">${dayNum}</span>
-                            <div class="day-weather">
-                                <i class="fas fa-cloud-sun"></i>
-                                <span>16°</span>
-                            </div>
-                        </div>
-                        <div class="day-outfit">
-                            ${day.outfit ? `
-                                <div class="day-outfit-preview">
-                                    ${day.outfit.top?.image ? `<img src="${day.outfit.top.image}" alt="">` : ''}
-                                    ${day.outfit.bottom?.image ? `<img src="${day.outfit.bottom.image}" alt="">` : ''}
-                                </div>
-                            ` : `
-                                <div class="day-outfit-empty">
-                                    <i class="fas fa-plus"></i>
-                                    <span>Plan outfit</span>
-                                </div>
-                            `}
-                        </div>
-                        <button class="btn-plan-day" onclick="App.planOutfitForDay('${day.date}')">
-                            ${day.outfit ? 'Wijzig' : 'Plan'}
-                        </button>
-                    </div>
-                `;
-            }).join('');
-        }
-        
-        // Load forecast
-        if (forecastBar && typeof RealWeatherAPI !== 'undefined') {
-            RealWeatherAPI.getMockForecast().then(forecast => {
-                forecastBar.innerHTML = forecast.map(day => {
-                    const dateObj = new Date(day.date);
-                    const dayName = dateObj.toLocaleDateString('nl-NL', { weekday: 'short' });
-                    const icons = {
-                        sunny: 'fa-sun', cloudy: 'fa-cloud', rainy: 'fa-cloud-rain', 
-                        'partly-cloudy': 'fa-cloud-sun', cold: 'fa-snowflake'
-                    };
-                    return `
-                        <div class="forecast-day">
-                            <span class="day">${dayName}</span>
-                            <i class="fas ${icons[day.condition] || 'fa-cloud'}"></i>
-                            <span class="temp">${day.temp}°</span>
-                        </div>
-                    `;
-                }).join('');
-            });
+        // Initialize the WeekPlannerManager
+        if (typeof WeekPlannerManager !== 'undefined') {
+            WeekPlannerManager.init();
         }
     },
 
     planOutfitForDay(date) {
-        // Generate a random outfit for the day
-        if (typeof TodayManager !== 'undefined') {
-            const wardrobe = DataManager.getWardrobe();
-            const categories = {
-                tops: wardrobe.filter(i => i.category === 'tops'),
-                bottoms: wardrobe.filter(i => i.category === 'bottoms'),
-                shoes: wardrobe.filter(i => i.category === 'shoes')
-            };
-            
-            const outfit = {
-                top: categories.tops[Math.floor(Math.random() * categories.tops.length)] || null,
-                bottom: categories.bottoms[Math.floor(Math.random() * categories.bottoms.length)] || null,
-                shoes: categories.shoes[Math.floor(Math.random() * categories.shoes.length)] || null
-            };
-            
-            WeekPlanner.setOutfitForDay(date, outfit);
-            this.loadPlannerPage();
-            App.showSuccess('Gepland!', 'Outfit toegevoegd aan je planning');
+        // Use WeekPlannerManager for planning
+        if (typeof WeekPlannerManager !== 'undefined') {
+            WeekPlannerManager.generateSuggestion(date);
         }
     },
 

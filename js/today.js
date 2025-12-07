@@ -417,6 +417,7 @@ const TodayManager = {
                 if (wardrobeItem) {
                     wardrobeItem.wearCount = (wardrobeItem.wearCount || 0) + 1;
                     wardrobeItem.lastWorn = new Date().toISOString();
+                    wardrobeItem.status = 'worn'; // Mark as worn
                     updated = true;
                 }
             }

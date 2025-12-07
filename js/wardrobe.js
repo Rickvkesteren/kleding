@@ -157,15 +157,32 @@ const WardrobeManager = {
             return;
         }
         
-        grid.innerHTML = items.map(item => `
-            <div class="clothing-card" data-id="${item.id}" onclick="WardrobeManager.showItemDetail('${item.id}')">
-                <img src="${item.image}" alt="${item.name}">
-                <div class="clothing-card-info">
-                    <h4>${item.name}</h4>
-                    <span>${item.color || ''}</span>
+        grid.innerHTML = items.map(item => {
+            const status = item.status || 'available';
+            const statusBadge = this.getStatusBadge(status);
+            
+            return `
+                <div class="clothing-card ${status}" data-id="${item.id}" onclick="WardrobeManager.showItemDetail('${item.id}')">
+                    <img src="${item.image}" alt="${item.name}">
+                    ${statusBadge}
+                    <div class="clothing-card-info">
+                        <h4>${item.name}</h4>
+                        <span>${item.color || ''}</span>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
+    },
+
+    // Get status badge HTML
+    getStatusBadge(status) {
+        if (status === 'available') return '';
+        
+        const badges = {
+            washing: '<span class="item-status-badge washing"><i class="fas fa-soap"></i></span>',
+            worn: '<span class="item-status-badge worn"><i class="fas fa-clock"></i></span>'
+        };
+        return badges[status] || '';
     },
 
     updateStats() {
@@ -369,16 +386,118 @@ const WardrobeManager = {
         const item = DataManager.getWardrobe().find(i => i.id === itemId);
         if (!item) return;
         
-        // Could show a detail modal or edit screen
-        console.log('Item detail:', item);
+        const status = item.status || 'available';
+        const wearCount = item.wearCount || 0;
+        const lastWorn = item.lastWorn ? new Date(item.lastWorn).toLocaleDateString('nl-NL') : 'Nooit';
         
-        // For now, confirm delete
-        if (confirm(`Wil je "${item.name}" verwijderen?`)) {
-            DataManager.removeClothingItem(itemId);
-            this.loadWardrobe();
-            this.updateStats();
-            App.showSuccess('Verwijderd', 'Kledingstuk is verwijderd');
-        }
+        // Create detail modal
+        const modal = document.createElement('div');
+        modal.className = 'item-detail-modal';
+        modal.innerHTML = `
+            <div class="item-detail-content">
+                <button class="close-detail"><i class="fas fa-times"></i></button>
+                
+                <div class="detail-image">
+                    <img src="${item.image}" alt="${item.name}">
+                </div>
+                
+                <div class="detail-info-section">
+                    <h2>${item.name}</h2>
+                    <div class="detail-meta">
+                        <span class="meta-item"><i class="fas fa-tag"></i> ${item.category || 'Kleding'}</span>
+                        <span class="meta-item"><i class="fas fa-palette"></i> ${item.color || 'Onbekend'}</span>
+                        ${item.price ? `<span class="meta-item"><i class="fas fa-euro-sign"></i> ${item.price}</span>` : ''}
+                    </div>
+                    
+                    <div class="detail-stats">
+                        <div class="stat-box">
+                            <span class="stat-value">${wearCount}x</span>
+                            <span class="stat-label">Gedragen</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-value">${lastWorn}</span>
+                            <span class="stat-label">Laatst gedragen</span>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-status-section">
+                        <h4>Status</h4>
+                        <div class="item-detail-status">
+                            <button class="status-action laundry ${status === 'washing' ? 'active' : ''}" data-status="washing">
+                                <i class="fas fa-soap"></i> In de was
+                            </button>
+                            <button class="status-action clean ${status === 'available' ? 'active' : ''}" data-status="available">
+                                <i class="fas fa-check"></i> Schoon
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-actions">
+                        <button class="btn-delete-item">
+                            <i class="fas fa-trash"></i> Verwijderen
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        setTimeout(() => modal.classList.add('active'), 10);
+        
+        // Event listeners
+        modal.querySelector('.close-detail').addEventListener('click', () => {
+            modal.classList.remove('active');
+            setTimeout(() => modal.remove(), 300);
+        });
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+                setTimeout(() => modal.remove(), 300);
+            }
+        });
+        
+        // Status buttons
+        modal.querySelectorAll('.status-action').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const newStatus = btn.dataset.status;
+                DataManager.updateItemStatus(itemId, newStatus);
+                
+                modal.querySelectorAll('.status-action').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                this.loadWardrobe();
+                this.showToast(newStatus === 'washing' ? '🧺 In de was gezet' : '✓ Schoon en beschikbaar');
+            });
+        });
+        
+        // Delete button
+        modal.querySelector('.btn-delete-item').addEventListener('click', () => {
+            if (confirm(`Weet je zeker dat je "${item.name}" wilt verwijderen?`)) {
+                DataManager.removeClothingItem(itemId);
+                modal.classList.remove('active');
+                setTimeout(() => modal.remove(), 300);
+                this.loadWardrobe();
+                this.updateStats();
+                this.showToast('Kledingstuk verwijderd');
+            }
+        });
+    },
+    
+    showToast(message) {
+        const existing = document.querySelector('.toast-notification');
+        if (existing) existing.remove();
+        
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification';
+        toast.innerHTML = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => toast.classList.add('show'), 10);
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 2500);
     },
 
     refresh() {

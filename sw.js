@@ -1,5 +1,5 @@
 // StyleMate Service Worker - Offline Support
-const CACHE_NAME = 'stylemate-v1';
+const CACHE_NAME = 'stylemate-v2';
 const urlsToCache = [
   '/kleding/index.html',
   '/kleding/css/style.css',
@@ -7,7 +7,8 @@ const urlsToCache = [
   '/kleding/js/features.js',
   '/kleding/js/today.js',
   '/kleding/js/swipe.js',
-  '/kleding/js/wardrobe.js'
+  '/kleding/js/wardrobe.js',
+  '/kleding/js/planner.js'
 ];
 
 // Install - cache files
