@@ -304,6 +304,166 @@ const App = {
             this.modules.today.refresh();
         } else if (pageId === 'wardrobe' && this.modules.wardrobe) {
             this.modules.wardrobe.refresh();
+        } else if (pageId === 'shop') {
+            this.loadShopPage();
+        } else if (pageId === 'saved') {
+            this.loadSavedPage();
+        }
+    },
+
+    // Load Shop Page content
+    loadShopPage() {
+        // Personalized items
+        const personalizedEl = document.getElementById('personalizedShop');
+        if (personalizedEl) {
+            const items = ShopManager.getPersonalizedItems();
+            personalizedEl.innerHTML = items.map(item => `
+                <div class="shop-item" onclick="App.openShopItem('${item.id}')">
+                    <img src="${item.image}" alt="${item.name}">
+                    <div class="shop-item-info">
+                        <span class="shop-item-brand">${item.brand}</span>
+                        <h4>${item.name}</h4>
+                        <div class="shop-item-price">
+                            <span class="price">€${item.price.toFixed(2)}</span>
+                            ${item.originalPrice ? `<span class="original">€${item.originalPrice.toFixed(2)}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Matching items
+        const matchingEl = document.getElementById('matchingShop');
+        if (matchingEl) {
+            const wardrobe = DataManager.getWardrobe();
+            const items = ShopManager.getMatchingItems(wardrobe);
+            matchingEl.innerHTML = items.map(item => `
+                <div class="shop-item" onclick="App.openShopItem('${item.id}')">
+                    <img src="${item.image}" alt="${item.name}">
+                    <div class="shop-item-info">
+                        <span class="shop-item-brand">${item.brand}</span>
+                        <h4>${item.name}</h4>
+                        <div class="shop-item-price">
+                            <span class="price">€${item.price.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Sets
+        const setsEl = document.getElementById('shopSets');
+        if (setsEl) {
+            const sets = ShopManager.getSets();
+            setsEl.innerHTML = sets.map(set => {
+                const setItems = set.items.map(id => ShopManager.getItemById(id)).filter(Boolean);
+                return `
+                    <div class="shop-set">
+                        <div class="set-images">
+                            ${setItems.slice(0, 3).map(item => `<img src="${item.image}" alt="${item.name}">`).join('')}
+                        </div>
+                        <div class="set-info">
+                            <h4>${set.name}</h4>
+                            <div class="set-price">
+                                <span class="price">€${set.price.toFixed(2)}</span>
+                                <span class="original">€${set.originalPrice.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    },
+
+    // Open shop item for swipe
+    openShopItem(itemId) {
+        const item = ShopManager.getItemById(itemId);
+        if (item) {
+            this.openSwipeForCategory(item.category, 'shop');
+        }
+    },
+
+    // Load Saved Page content
+    loadSavedPage() {
+        const content = document.getElementById('savedContent');
+        if (!content) return;
+
+        // Setup tab listeners
+        document.querySelectorAll('.saved-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.saved-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                this.renderSavedContent(tab.dataset.tab);
+            });
+        });
+
+        // Render default tab
+        this.renderSavedContent('outfits');
+    },
+
+    renderSavedContent(tab) {
+        const content = document.getElementById('savedContent');
+        if (!content) return;
+
+        if (tab === 'outfits') {
+            const outfits = DataManager.getOutfits();
+            if (outfits.length === 0) {
+                content.innerHTML = `
+                    <div class="empty-saved">
+                        <i class="fas fa-bookmark"></i>
+                        <h3>Nog geen outfits opgeslagen</h3>
+                        <p>Sla je favoriete looks op om ze hier te zien</p>
+                    </div>
+                `;
+            } else {
+                content.innerHTML = `
+                    <div class="saved-grid">
+                        ${outfits.map(outfit => `
+                            <div class="saved-outfit">
+                                <div class="outfit-preview">
+                                    ${outfit.top?.image ? `<img src="${outfit.top.image}" alt="Top">` : ''}
+                                    ${outfit.bottom?.image ? `<img src="${outfit.bottom.image}" alt="Bottom">` : ''}
+                                </div>
+                                <span class="outfit-date">${new Date(outfit.createdAt).toLocaleDateString('nl-NL')}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+        } else if (tab === 'favorites') {
+            content.innerHTML = `
+                <div class="empty-saved">
+                    <i class="fas fa-heart"></i>
+                    <h3>Nog geen favorieten</h3>
+                    <p>Markeer items als favoriet om ze hier te zien</p>
+                </div>
+            `;
+        } else if (tab === 'history') {
+            const history = DataManager.getHistory();
+            if (history.length === 0) {
+                content.innerHTML = `
+                    <div class="empty-saved">
+                        <i class="fas fa-history"></i>
+                        <h3>Geen geschiedenis</h3>
+                        <p>Je outfit geschiedenis verschijnt hier</p>
+                    </div>
+                `;
+            } else {
+                content.innerHTML = `
+                    <div class="history-list">
+                        ${history.map(outfit => `
+                            <div class="history-item">
+                                <div class="history-preview">
+                                    ${outfit.top?.image ? `<img src="${outfit.top.image}" alt="">` : ''}
+                                </div>
+                                <div class="history-info">
+                                    <span class="history-date">${new Date(outfit.wornAt).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'short' })}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
         }
     },
 
@@ -363,6 +523,15 @@ document.addEventListener('DOMContentLoaded', () => {
         
         demoItems.forEach(item => DataManager.addClothingItem(item));
         console.log('📦 Demo data toegevoegd');
+    }
+    
+    // Setup close buttons for success modal
+    const closeSavedBtn = document.getElementById('closeSavedModal');
+    if (closeSavedBtn) {
+        closeSavedBtn.addEventListener('click', () => {
+            const modal = document.getElementById('outfitSavedModal');
+            if (modal) modal.classList.remove('active');
+        });
     }
     
     App.init();

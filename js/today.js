@@ -51,7 +51,17 @@ const TodayManager = {
         const weatherFeelsEl = document.querySelector('.weather-feels');
         const adviceEl = document.querySelector('.weather-advice span');
         
-        if (iconEl) iconEl.textContent = this.weather.icon;
+        // Weather icon is Font Awesome, so we update the class based on condition
+        if (iconEl && this.weather.condition) {
+            const iconMap = {
+                sunny: 'fa-sun',
+                cloudy: 'fa-cloud',
+                rainy: 'fa-cloud-rain',
+                'partly-cloudy': 'fa-cloud-sun',
+                cold: 'fa-snowflake'
+            };
+            iconEl.className = `fas ${iconMap[this.weather.condition] || 'fa-cloud-sun'} weather-icon`;
+        }
         if (tempValueEl) tempValueEl.textContent = this.weather.temp;
         if (weatherDescEl) weatherDescEl.textContent = this.weather.desc;
         if (weatherFeelsEl) weatherFeelsEl.textContent = `Voelt als ${this.weather.feels}°`;

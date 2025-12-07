@@ -60,7 +60,13 @@ const WardrobeManager = {
             option.addEventListener('click', () => {
                 document.querySelectorAll('.cat-option').forEach(o => o.classList.remove('active'));
                 option.classList.add('active');
-                this.selectedCategory = option.dataset.category;
+                this.selectedCategory = option.dataset.value || option.dataset.category;
+                
+                // Show details form after selecting category
+                const detailsForm = document.getElementById('detailsForm');
+                if (detailsForm && this.selectedPhoto) {
+                    detailsForm.style.display = 'block';
+                }
             });
         });
         
@@ -78,7 +84,7 @@ const WardrobeManager = {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.season-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                this.selectedSeason = btn.dataset.season;
+                this.selectedSeason = btn.dataset.value || btn.dataset.season || 'all';
             });
         });
         
@@ -179,14 +185,23 @@ const WardrobeManager = {
 
     updatePhotoPreview() {
         const preview = document.querySelector('.photo-preview');
+        const detailsForm = document.getElementById('detailsForm');
+        
         if (!preview) return;
         
         if (this.selectedPhoto) {
             preview.innerHTML = `<img src="${this.selectedPhoto}" alt="Preview">`;
             
-            // Enable save button
+            // Show details form
+            if (detailsForm) {
+                detailsForm.style.display = 'block';
+            }
+            
+            // Enable save button if category is also selected
             const saveBtn = document.querySelector('.btn-save');
-            if (saveBtn) saveBtn.disabled = false;
+            if (saveBtn && this.selectedCategory) {
+                saveBtn.disabled = false;
+            }
         } else {
             preview.innerHTML = `
                 <div class="photo-placeholder">
@@ -194,6 +209,11 @@ const WardrobeManager = {
                     <span>Maak een foto of kies uit galerij</span>
                 </div>
             `;
+            
+            // Hide details form
+            if (detailsForm) {
+                detailsForm.style.display = 'none';
+            }
         }
     },
 
