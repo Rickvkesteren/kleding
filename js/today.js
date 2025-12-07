@@ -96,6 +96,43 @@ const TodayManager = {
             // Generate new outfit suggestion
             this.generateOutfit();
         }
+        
+        // Load recent outfits
+        this.loadRecentOutfits();
+    },
+    
+    loadRecentOutfits() {
+        const recentEl = document.getElementById('recentOutfits');
+        if (!recentEl) return;
+        
+        const history = DataManager.getHistory();
+        
+        if (history.length === 0) {
+            recentEl.innerHTML = `
+                <div class="empty-recent" style="padding: 20px; text-align: center; color: var(--gray-400); font-size: 0.85rem; min-width: 200px;">
+                    <i class="fas fa-clock" style="font-size: 1.5rem; margin-bottom: 8px; display: block;"></i>
+                    <span>Nog geen outfits gedragen</span>
+                </div>
+            `;
+            return;
+        }
+        
+        recentEl.innerHTML = history.slice(0, 5).map(outfit => {
+            const topImage = outfit.top?.image || outfit.outerwear?.image || '';
+            const bottomImage = outfit.bottom?.image || outfit.shoes?.image || '';
+            const date = new Date(outfit.wornAt);
+            const dayName = date.toLocaleDateString('nl-NL', { weekday: 'short' });
+            
+            return `
+                <div class="recent-item" style="min-width: 100px; flex-shrink: 0;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; height: 80px; border-radius: 12px; overflow: hidden; background: var(--gray-200);">
+                        ${topImage ? `<img src="${topImage}" style="width: 100%; height: 100%; object-fit: cover;">` : '<div></div>'}
+                        ${bottomImage ? `<img src="${bottomImage}" style="width: 100%; height: 100%; object-fit: cover;">` : '<div></div>'}
+                    </div>
+                    <span style="display: block; font-size: 0.7rem; color: var(--gray-500); margin-top: 6px; text-align: center; text-transform: capitalize;">${dayName}</span>
+                </div>
+            `;
+        }).join('');
     },
 
     generateOutfit() {
@@ -141,14 +178,28 @@ const TodayManager = {
     },
 
     updateOutfitUI() {
-        const layers = {
+        const layerElements = {
             outerwear: document.querySelector('.outfit-layer.outerwear'),
             top: document.querySelector('.outfit-layer.top'),
             bottom: document.querySelector('.outfit-layer.bottom'),
             shoes: document.querySelector('.outfit-layer.shoes')
         };
         
-        Object.entries(layers).forEach(([key, element]) => {
+        const icons = {
+            outerwear: 'fa-vest',
+            top: 'fa-tshirt',
+            bottom: 'fa-socks',
+            shoes: 'fa-shoe-prints'
+        };
+        
+        const names = {
+            outerwear: 'Jas',
+            top: 'Top',
+            bottom: 'Broek',
+            shoes: 'Schoenen'
+        };
+        
+        Object.entries(layerElements).forEach(([key, element]) => {
             if (!element) return;
             
             const item = this.currentOutfit[key];
@@ -158,18 +209,6 @@ const TodayManager = {
                 element.innerHTML = `<img src="${item.image}" alt="${item.name || key}">`;
             } else {
                 element.classList.remove('filled');
-                const icons = {
-                    outerwear: 'fa-vest',
-                    top: 'fa-shirt',
-                    bottom: 'fa-person',
-                    shoes: 'fa-shoe-prints'
-                };
-                const names = {
-                    outerwear: 'Jas',
-                    top: 'Bovenstuk',
-                    bottom: 'Onderstuk',
-                    shoes: 'Schoenen'
-                };
                 element.innerHTML = `
                     <div class="layer-placeholder">
                         <i class="fas ${icons[key]}"></i>

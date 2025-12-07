@@ -305,6 +305,10 @@ body { font-family: var(--font); background: var(--gray-100); color: var(--gray-
 /* Form Row */
 .form-row { display: flex; gap: 16px; }
 .form-group.half { flex: 1; }
+
+/* Recent Items */
+.recent-item { min-width: 100px; flex-shrink: 0; cursor: pointer; }
+.recent-item:hover { opacity: 0.8; }
 .season-btn i { margin-right: 8px; }
 
 /* Success */
